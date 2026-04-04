@@ -71,8 +71,9 @@ def scrape(html, ret=False):
     # then inside the parent search for the magic div / just search for the text "leaving between"
     # once we have the magic div do some processing to put it into a nice struct
     options = []
-    direction_divs = soup.find_all("div", {"class": MAGIC_OD_CLASS})
-    train_input_elements = direction_divs[0].find_all("input", {"class": MAGIC_INPUT_CLASS}) # outbound
+    direction_sections = soup.find_all("section", {"class": MAGIC_OD_CLASS})
+    print("Found direction divs:", len(direction_sections))
+    train_input_elements = direction_sections[0].find_all("input", {"class": MAGIC_INPUT_CLASS}) # outbound
     for magic_input in train_input_elements: 
         parent = magic_input.parent
         if(parent):
@@ -80,7 +81,7 @@ def scrape(html, ret=False):
             options.append(parse_departure(div))
             
     if ret:
-        train_input_elements = direction_divs[1].find_all("input", {"class": MAGIC_INPUT_CLASS}) # inbound
+        train_input_elements = direction_sections[1].find_all("input", {"class": MAGIC_INPUT_CLASS}) # inbound
         for magic_input in train_input_elements: 
             parent = magic_input.parent
             if(parent):
@@ -119,7 +120,7 @@ def parse_departure(div, outbound=True):
         if currency_match:
             currency = currency_match.group()
             
-    return TrainJourney(date, outbound, early_time, late_time, price, currency)
+    return TrainJourney(outbound, date, early_time, late_time, price, currency)
         
         
 class TrainJourney:
@@ -138,9 +139,9 @@ def main(url = URL):
     session = create_session()
     
     html = fetch(session, url)
-
+    returning = url.find("inbound") != -1
     if html:
-        scrape(html)
+        scrape(html, returning)
     else:
         print("Failed to fetch page")
 
@@ -156,7 +157,7 @@ def main(url = URL):
         sleep_time = 900 + random.randint(-300, 300)
         time.sleep(max(60, sleep_time))  # never less than 1 min
 
-def handler(event, context):
+def handler(event, context=None):
     origin = event.get("origin")
     destination = event.get("destination")
     outbound_date = event.get("outbound_date")
@@ -166,9 +167,9 @@ def handler(event, context):
     main(url=search_url)
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Flight search script")
-    parser.add_argument("--origin", required=True, help="Origin airport code")
-    parser.add_argument("--destination", required=True, help="Destination airport code")
+    parser = argparse.ArgumentParser(description="Snap Search Script")
+    parser.add_argument("--origin", required=True, help="Origin Name (e.g. 'London St Pancras')")
+    parser.add_argument("--destination", required=True, help="Destination Name (e.g. 'Paris Gare du Nord')")
     parser.add_argument("--outbound_date", required=True, help="Outbound date (YYYY-MM-DD)")
     parser.add_argument("--inbound_date", required=False, help="Inbound date (YYYY-MM-DD)")
 
