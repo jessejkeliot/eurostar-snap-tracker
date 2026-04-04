@@ -29,12 +29,9 @@ def cleanup_old_subscriptions():
 
     # Delete subscriptions where the search is in the past
     cursor.execute("""
-        DELETE FROM subscriptions
-        WHERE search_id IN (
-            SELECT id FROM searches
-            WHERE outbound_date < %s
-        )
-        RETURNING user_id, search_id;
+        DELETE FROM searches
+        WHERE outbound_date < %s
+        RETURNING id;
     """, (today_str,))
 
     deleted_rows = cursor.fetchall()
