@@ -18,3 +18,12 @@ Serverless (Lambda) is ideal for periodic tasks
 ✅ EB (EventBridge) schedules for cron‑like triggers
 ✅ Store user preferences cheaply in DynamoDB or S3
 ✅ Use Twilio Sandbox for initial testing (free)
+
+Zip your Lambda function with dependencies:
+zip -r lambda_cleanup_postgres.zip lambda_cleanup_postgres.py
+Add psycopg2:
+Either use Lambda Layers for psycopg2
+Or package a compiled psycopg2-binary for Linux x86_64 into your zip
+Configure EventBridge:
+Schedule: daily, or every X hours
+Target: Lambda function
