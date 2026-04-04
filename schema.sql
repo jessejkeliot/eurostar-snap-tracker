@@ -12,9 +12,7 @@ CREATE TABLE IF NOT EXISTS searches (
     origin INTEGER NOT NULL,
     destination INTEGER NOT NULL,
     outbound_date DATE NOT NULL,
-    outbound_time TEXT NOT NULL,
     inbound_date DATE,
-    inbound_time TEXT,
     last_checked TIMESTAMP
 );
 
