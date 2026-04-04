@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import re
+from myparse import build_search_url
 
 URL = "https://snap.eurostar.com/uk-en/search?adult=1&origin=7015400&destination=8727100&outbound=2026-04-08&outslot=13%3A00"
 MAGIC_INPUT_CLASS = "css-1ci7kll"
@@ -17,7 +18,17 @@ MAGIC_LABEL_CLASS = "css-1ggdddu"
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_0) AppleWebKit/537.36 Chrome/120 Safari/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
+    "Mozilla/5.0 (compatible; MSIE 8.0; Windows; U; Windows NT 6.0; Trident/4.0)",
+    "Mozilla/5.0 (compatible; MSIE 7.0; Windows; Windows NT 6.0; WOW64; en-US Trident/4.0)",
+    "Mozilla/5.0 (Windows; U; Windows NT 6.3;; en-US) AppleWebKit/603.18 (KHTML, like Gecko) Chrome/47.0.1541.349 Safari/533.6 Edge/9.12633",
+    "Mozilla/5.0 (Windows NT 10.5; x64; en-US) AppleWebKit/535.12 (KHTML, like Gecko) Chrome/51.0.1999.273 Safari/600.9 Edge/13.38678",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 8_4_5; like Mac OS X) AppleWebKit/534.24 (KHTML, like Gecko) Chrome/54.0.1507.332 Mobile Safari/536.5",
+    "Mozilla/5.0 (Linux i666 x86_64) AppleWebKit/603.31 (KHTML, like Gecko) Chrome/49.0.1507.2 AppSafari/533",
+    "Mozilla/5.0 (Windows; Windows NT 10.1; Win64; x64; en-US) Gecko/20100101 Firefox/58.6",
+    "Mozilla/5.0 (Windows NT 6.0;; en-US) AppleWebKit/534.13 (KHTML, like Gecko) Chrome/47.0.3472.3 Safari/537",
+    "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_4_8) Gecko/20100101 Firefox/73.8",
+    "Mozilla/5.0 (U; Linux x86_64; en-US) Gecko/20100101 Firefox/51.4"
 ]
 
 def create_session():
@@ -64,6 +75,8 @@ def scrape(html):
         if(parent):
             div = parent.find("div", {"class": MAGIC_DIV_CLASS})
             options.append(parse_departure(div))
+    for op in options:
+        print(op)
     
 def parse_departure(div):
     # --- 1. Extract date from data-testid ---
@@ -89,13 +102,12 @@ def parse_departure(div):
     if price_container:
         price_text = price_container.get_text(strip=True)
         price_match = re.search(r"\d+", price_text)
-        currency_match = re.search(r"\p{Sc}+", price_text)
+        currency_match = re.search(r"[£$€]", price_text)
         if price_match:
             price = int(price_match.group())
         if currency_match:
             currency = currency_match.group()
             
-
     return TrainDeparture(date, early_time, late_time, price, currency)
         
         
@@ -110,10 +122,10 @@ class TrainDeparture:
         return f"TrainDeparture(date={self.date}, early={self.early_time}, late={self.late_time}, price={self.price})"
     
 
-def main():
+def main(url = URL):
     session = create_session()
     
-    html = fetch(session, URL)
+    html = fetch(session, url)
 
     if html:
         scrape(html)
@@ -132,5 +144,15 @@ def main():
         sleep_time = 900 + random.randint(-300, 300)
         time.sleep(max(60, sleep_time))  # never less than 1 min
 
+def handler(event, context):
+    origin = event.get("origin")
+    destination = event.get("destination")
+    date = event.get("date")
+
+    search_url = build_search_url(origin, destination, date)
+    main(url=search_url)
+
 if __name__ == "__main__":
+    
+    
     main()
