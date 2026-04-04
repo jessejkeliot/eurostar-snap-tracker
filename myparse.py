@@ -4,13 +4,17 @@ station_ids = {"Paris Gare du Nord": "8727100", "Amsterdam Centraal": "8400058",
 
 
 
-def build_search_url(origin, destination, date):
+def build_search_url(origin, destination, outbound_date, inbound_date= None):
     base_url = "https://snap.eurostar.com/uk-en/search"
 
     params = {
     "adult": 1,
     "origin": int(str(station_ids.get(origin))),        # London Paddington
     "destination": int(str(station_ids.get(destination))),   # Paris Gare du Nord
-    "outbound": date,
+    "outbound": outbound_date, #YYYY-MM-DD
     }
+    if(inbound_date):
+        params["inbound"] = inbound_date
     return f"{base_url}?{urlencode(params)}"
+
+print(build_search_url("London St Pancras", "Paris Gare du Nord", "2026-04-17"))

@@ -1,3 +1,4 @@
+import argparse
 import random
 import requests
 from bs4 import BeautifulSoup
@@ -8,6 +9,7 @@ from myparse import build_search_url
 URL = "https://snap.eurostar.com/uk-en/search?adult=1&origin=7015400&destination=8727100&outbound=2026-04-08&outslot=13%3A00"
 MAGIC_INPUT_CLASS = "css-1ci7kll"
 MAGIC_DIV_CLASS = "css-nfbk4n"
+MAGIC_OD_CLASS = "css-1hy2wyu" #class of the div that has origin and destination information
 MAGIC_LABEL_CLASS = "css-1ggdddu"
 
 # inside the label div there is a div which always has the class "nfbk4n" and an input with has
@@ -61,24 +63,33 @@ def fetch(session, url, retries=3):
 
     return None
 
-def scrape(html):
+def scrape(html, ret=False):
     soup = BeautifulSoup(html, "html.parser")
+    
 
     # search for all the input radios with the magic class. Then just get the parent.
     # then inside the parent search for the magic div / just search for the text "leaving between"
     # once we have the magic div do some processing to put it into a nice struct
-     
-    train_input_elements = soup.find_all("input", {"class": MAGIC_INPUT_CLASS})
     options = []
+    direction_divs = soup.find_all("div", {"class": MAGIC_OD_CLASS})
+    train_input_elements = direction_divs[0].find_all("input", {"class": MAGIC_INPUT_CLASS}) # outbound
     for magic_input in train_input_elements: 
         parent = magic_input.parent
         if(parent):
             div = parent.find("div", {"class": MAGIC_DIV_CLASS})
             options.append(parse_departure(div))
+            
+    if ret:
+        train_input_elements = direction_divs[1].find_all("input", {"class": MAGIC_INPUT_CLASS}) # inbound
+        for magic_input in train_input_elements: 
+            parent = magic_input.parent
+            if(parent):
+                div = parent.find("div", {"class": MAGIC_DIV_CLASS})
+                options.append(parse_departure(div, outbound=False))
     for op in options:
         print(op)
     
-def parse_departure(div):
+def parse_departure(div, outbound=True):
     # --- 1. Extract date from data-testid ---
     testid = div.get("data-testid", "")
     # format: "2026-04-09-outbound-13:00"
@@ -108,18 +119,19 @@ def parse_departure(div):
         if currency_match:
             currency = currency_match.group()
             
-    return TrainDeparture(date, early_time, late_time, price, currency)
+    return TrainJourney(date, outbound, early_time, late_time, price, currency)
         
         
-class TrainDeparture:
-    def __init__(self, date, early_time, late_time, price, currency) -> None:
+class TrainJourney:
+    def __init__(self, outbound, date, early_time, late_time, price, currency) -> None:
+        self.outbound = outbound
         self.date = date
         self.early_time = early_time
         self.late_time = late_time
         self.price = price
         self.currency = currency
     def __repr__(self):
-        return f"TrainDeparture(date={self.date}, early={self.early_time}, late={self.late_time}, price={self.price})"
+        return f"{"Return " if not self.outbound else ""}TrainDeparture(date={self.date}, early={self.early_time}, late={self.late_time}, price={self.price})"
     
 
 def main(url = URL):
@@ -147,12 +159,27 @@ def main(url = URL):
 def handler(event, context):
     origin = event.get("origin")
     destination = event.get("destination")
-    date = event.get("date")
+    outbound_date = event.get("outbound_date")
+    inbound_date = event.get("inbound_date")
 
-    search_url = build_search_url(origin, destination, date)
+    search_url = build_search_url(origin, destination, outbound_date, inbound_date)
     main(url=search_url)
 
 if __name__ == "__main__":
-    
-    
-    main()
+    parser = argparse.ArgumentParser(description="Flight search script")
+    parser.add_argument("--origin", required=True, help="Origin airport code")
+    parser.add_argument("--destination", required=True, help="Destination airport code")
+    parser.add_argument("--outbound_date", required=True, help="Outbound date (YYYY-MM-DD)")
+    parser.add_argument("--inbound_date", required=False, help="Inbound date (YYYY-MM-DD)")
+
+    args = parser.parse_args()
+
+    # Build event dictionary like AWS Lambda
+    event = {
+        "origin": args.origin,
+        "destination": args.destination,
+        "outbound_date": args.outbound_date,
+        "inbound_date": args.inbound_date,
+    }
+
+    handler(event)
