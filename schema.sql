@@ -9,11 +9,14 @@ CREATE TABLE IF NOT EXISTS users (
 -- Searches table
 CREATE TABLE IF NOT EXISTS searches (
     id SERIAL PRIMARY KEY,
+    UNIQUE(origin, destination, outbound_date, inbound_date),
     origin INTEGER NOT NULL,
     destination INTEGER NOT NULL,
     outbound_date DATE NOT NULL,
     inbound_date DATE,
-    last_checked TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_checked TIMESTAMP DEFAULT NULL,
+    last_results CHAR(64) DEFAULT NULL
 );
 
 -- Subscriptions table
@@ -24,4 +27,5 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     PRIMARY KEY (user_id, search_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (search_id) REFERENCES searches(id) ON DELETE CASCADE
+    UNIQUE(user_id, search_id)
 );
