@@ -2,7 +2,8 @@ from urllib.parse import urlencode
 
 station_ids = {"Paris Gare du Nord": "8727100", "Amsterdam Centraal": "8400058", "Brussels": "8814001", "Lille Europe": "8722326", "Cologne Hbf":"8015458", "Rotterdam Centraal": "8400530", "London St Pancras": "7015400"}
 
-
+# for the llm
+# print(station_ids.keys())
 
 def build_search_url(origin, destination, outbound_date, inbound_date= None):
     base_url = "https://snap.eurostar.com/uk-en/search"
