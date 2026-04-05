@@ -80,7 +80,7 @@ def scrape(html, ret=False):
             div = parent.find("div", {"class": MAGIC_DIV_CLASS})
             options.append(parse_departure(div))
             
-    if ret:
+    if ret and len(direction_sections) > 1:
         train_input_elements = direction_sections[1].find_all("input", {"class": MAGIC_INPUT_CLASS}) # inbound
         for magic_input in train_input_elements: 
             parent = magic_input.parent
@@ -157,14 +157,36 @@ def main(url = URL):
         sleep_time = 900 + random.randint(-300, 300)
         time.sleep(max(60, sleep_time))  # never less than 1 min
 
-def handler(event, context=None):
-    origin = event.get("origin")
-    destination = event.get("destination")
-    outbound_date = event.get("outbound_date")
-    inbound_date = event.get("inbound_date")
+def run_search_from_params(origin, destination, outbound_date, inbound_date):
+    """
+    Convenience wrapper (useful for CLI or testing)
+    """
+    search = {
+        "origin": origin,
+        "destination": destination,
+        "outbound_date": outbound_date,
+        "inbound_date": inbound_date,
+    }
 
-    search_url = build_search_url(origin, destination, outbound_date, inbound_date)
-    main(url=search_url)
+    return run_search(search)
+
+def run_search(search):
+    """
+    Main entry point used by the rest of the app.
+    """
+    url = build_search_url(
+        search["origin"],
+        search["destination"],
+        search["outbound_date"],
+        search["inbound_date"],
+    )
+
+    results = main(url=url)
+
+    return {
+        "url": url,
+        "results": results,
+    }
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Snap Search Script")
@@ -175,12 +197,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Build event dictionary like AWS Lambda
-    event = {
-        "origin": args.origin,
-        "destination": args.destination,
-        "outbound_date": args.outbound_date,
-        "inbound_date": args.inbound_date,
-    }
-
-    handler(event)
+    run_search_from_params(args.origin, args.destination, args.outbound_date, args.inbound_date)
+    
