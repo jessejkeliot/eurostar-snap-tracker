@@ -1,15 +1,16 @@
 import psycopg2
 from pathlib import Path
+import os
 
 SEARCH_INTERVAL = 900  # seconds, i.e. 15 minutes
 
-# PostgreSQL connection parameters
+
 DB_PARAMS = {
-    "host": "your-db-hostname",
-    "port": 5432,
-    "dbname": "your_db_name",
-    "user": "your_db_user",
-    "password": "your_db_password"
+    "host": os.getenv("DB_HOST"),
+    "port": int(os.getenv("DB_PORT", 5432)),
+    "dbname": os.getenv("DB_NAME"),
+    "user": os.getenv("DB_USER"),
+    "password": os.getenv("DB_PASSWORD"),
 }
 
 SCHEMA_FILE = "schema.sql"
