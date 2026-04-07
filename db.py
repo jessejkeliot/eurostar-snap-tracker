@@ -1,9 +1,11 @@
 import psycopg2
 from pathlib import Path
+from dotenv import load_dotenv
 import os
 
 SEARCH_INTERVAL = 900  # seconds, i.e. 15 minutes
 
+load_dotenv()
 
 DB_PARAMS = {
     "host": os.getenv("DB_HOST"),
