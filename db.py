@@ -179,8 +179,15 @@ def get_user_by_phone_number(phone_number):
                    FROM users
                    WHERE phone_number=%s
                    """, phone_number)
+    
+    row = cursor.fetchone()
+    
     cursor.close()
     conn.close()
+    if not row:
+        return None
+    
+    return row
 
 def update_last_run(search_id):
     conn = get_connection()
