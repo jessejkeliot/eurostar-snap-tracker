@@ -87,8 +87,6 @@ def scrape(html, ret=False):
             if(parent):
                 div = parent.find("div", {"class": MAGIC_DIV_CLASS})
                 options.append(parse_departure(div, outbound=False))
-    for op in options:
-        print(op)
     return options
     
 def parse_departure(div, outbound=True):
@@ -142,7 +140,14 @@ def main(url = URL):
     html = fetch(session, url)
     returning = url.find("inbound") != -1
     if html:
-        return scrape(html, returning)
+        journeys = scrape(html, returning)
+        print(url)
+        if(len(journeys) == 0):
+            print("No journeys found")
+        else:
+            for j in journeys:
+                print(j)
+        return journeys
     else:
         print("Failed to fetch page")
     emptyList : list[TrainJourney] = []

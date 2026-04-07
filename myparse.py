@@ -18,4 +18,4 @@ def build_search_url(origin, destination, outbound_date, inbound_date= None):
         params["inbound"] = inbound_date
     return f"{base_url}?{urlencode(params)}"
 
-print(build_search_url("London St Pancras", "Paris Gare du Nord", "2026-04-17"))
+# print(build_search_url("London St Pancras", "Paris Gare du Nord", "2026-04-17"))
