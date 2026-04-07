@@ -2,7 +2,7 @@ from db import get_searches_due, get_subscribed_users, update_last_run
 from tracker import run_search
 from messaging import send_results_to_user
 
-def handler(event, context):
+def handler():
     searches = get_searches_due()
 
     for search in searches:
