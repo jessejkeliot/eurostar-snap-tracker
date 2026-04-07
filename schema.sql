@@ -1,9 +1,11 @@
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    phone_number TEXT UNIQUE NOT NULL,
+    phone_number TEXT UNIQUE,
+    email TEXT UNIQUE,
     is_paying BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    CHECK (email IS NOT NULL OR phone_number IS NOT NULL)
 );
 
 -- Searches table
@@ -26,6 +28,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, search_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (search_id) REFERENCES searches(id) ON DELETE CASCADE
+    FOREIGN KEY (search_id) REFERENCES searches(id) ON DELETE CASCADE,
     UNIQUE(user_id, search_id)
 );
