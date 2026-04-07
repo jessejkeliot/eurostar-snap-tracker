@@ -170,6 +170,18 @@ def get_subscribed_users(search_id):
 
     return users
 
+def get_user_by_phone_number(phone_number):
+    onn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+                   SELECT id
+                   FROM users
+                   WHERE phone_number=%s
+                   """, phone_number)
+    cursor.close()
+    conn.close()
+
 def update_last_run(search_id):
     conn = get_connection()
     cursor = conn.cursor()
