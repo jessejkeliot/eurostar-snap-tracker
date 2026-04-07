@@ -45,3 +45,9 @@ Parse following text into the form { "origin": "...", "destination": "...", "out
 [[https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api]]
 
 [["https://developers.facebook.com/documentation/business-messaging/whatsapp/get-started"]]
+
+## Command Line Interface
+
+Call tracker.py with parameters. Example
+
+``` python3 tracker.py --origin "London St Pancras" --destination "Amsterdam Centraal" --outbound_date "2026-04-08" ```
