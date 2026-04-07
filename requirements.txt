@@ -1,0 +1,4 @@
+bottle
+psycopg2
+requests
+beautifulsoup4
