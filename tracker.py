@@ -70,7 +70,7 @@ def scrape(html, ret=False):
     # search for all the input radios with the magic class. Then just get the parent.
     # then inside the parent search for the magic div / just search for the text "leaving between"
     # once we have the magic div do some processing to put it into a nice struct
-    options = []
+    options: list[TrainJourney] = []
     direction_sections = soup.find_all("section", {"class": MAGIC_OD_CLASS})
     print("Found direction divs:", len(direction_sections))
     train_input_elements = direction_sections[0].find_all("input", {"class": MAGIC_INPUT_CLASS}) # outbound
@@ -89,6 +89,7 @@ def scrape(html, ret=False):
                 options.append(parse_departure(div, outbound=False))
     for op in options:
         print(op)
+    return options
     
 def parse_departure(div, outbound=True):
     # --- 1. Extract date from data-testid ---
@@ -141,10 +142,11 @@ def main(url = URL):
     html = fetch(session, url)
     returning = url.find("inbound") != -1
     if html:
-        scrape(html, returning)
+        return scrape(html, returning)
     else:
         print("Failed to fetch page")
-
+    emptyList : list[TrainJourney] = []
+    return emptyList
     while False:
         html = fetch(session, URL)
 
