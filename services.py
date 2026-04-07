@@ -11,15 +11,14 @@ def add_subscription(user_id, origin, destination, outbound_date, inbound_date):
     search = get_existing_search(origin, destination, outbound_date, inbound_date)
 
     if not search:
-        search_id = create_search(origin, destination, outbound_date, inbound_date)
+        search = create_search(origin, destination, outbound_date, inbound_date)
         is_new = True
     else:
-        search_id = search["id"]
         is_new = False
 
-    create_subscription(user_id, search_id)
+    create_subscription(user_id, search.id)
 
-    return search_id, is_new
+    return search.id, is_new
 
 
 def should_run_now(search):

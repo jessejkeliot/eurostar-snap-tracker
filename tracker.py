@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import re
+from models import MinimalSearch, Search
 from myparse import build_search_url
 
 URL = "https://snap.eurostar.com/uk-en/search?adult=1&origin=7015400&destination=8727100&outbound=2026-04-08&outslot=13%3A00"
@@ -168,24 +169,19 @@ def run_search_from_params(origin, destination, outbound_date, inbound_date):
     """
     Convenience wrapper (useful for CLI or testing)
     """
-    search = {
-        "origin": origin,
-        "destination": destination,
-        "outbound_date": outbound_date,
-        "inbound_date": inbound_date,
-    }
+    search = MinimalSearch(origin=origin, destination=destination, outbound_date=outbound_date, inbound_date=inbound_date)
 
     return run_search(search)
 
-def run_search(search):
+def run_search(search: MinimalSearch):
     """
     Main entry point used by the rest of the app.
     """
     url = build_search_url(
-        search["origin"],
-        search["destination"],
-        search["outbound_date"],
-        search["inbound_date"],
+        search.origin,
+        search.destination,
+        search.outbound_date,
+        search.inbound_date,
     )
 
     results = main(url=url)

@@ -2,6 +2,7 @@ import psycopg2
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+from models import User, Search, Subscription
 
 SEARCH_INTERVAL = 900  # seconds, i.e. 15 minutes
 
@@ -52,7 +53,7 @@ def get_existing_search(origin, destination, outbound_date, inbound_date):
     
     cursor.execute(
         """
-        SELECT id, origin, destination, outbound_date, inbound_date, last_run_at
+        SELECT id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
         FROM searches
         WHERE origin = %s
           AND destination = %s
@@ -61,7 +62,12 @@ def get_existing_search(origin, destination, outbound_date, inbound_date):
         """,
         (origin, destination, outbound_date, inbound_date),
     )
-    pass
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if row:
+        return Search(*row)
+    return None
 
 def create_search(origin, destination, outbound_date, inbound_date):
     # INSERT INTO searches ...
@@ -71,15 +77,15 @@ def create_search(origin, destination, outbound_date, inbound_date):
         """
         INSERT INTO searches (origin, destination, outbound_date, inbound_date)
         VALUES (%s, %s, %s, %s)
-        RETURNING id
+        RETURNING id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
         """,
         (origin, destination, outbound_date, inbound_date),
     )
-    search_id = cursor.fetchone()[0]
+    row = cursor.fetchone()
     conn.commit()
     cursor.close()
     conn.close()
-    return search_id
+    return Search(*row)
 
 def create_subscription(user_id, search_id):
     # INSERT INTO subscriptions ...
@@ -89,14 +95,21 @@ def create_subscription(user_id, search_id):
                    INSERT INTO subscriptions (user_id, search_id, created_at)
                    VALUES (%s, %s, NOW())
                    ON CONFLICT (user_id, search_id) DO NOTHING
-                   """)
-    pass
+                   RETURNING user_id, search_id, created_at
+                   """, (user_id, search_id))
+    row = cursor.fetchone()
+    conn.commit()
+    cursor.close()
+    conn.close()
+    if row:
+        return Subscription(*row)
+    return None
 
 def get_search_by_id(search_id):
     conn =  get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-                   SELECT origin, destination, outbound_date, inbound_date
+                   SELECT id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
                    FROM searches
                    WHERE id = %s
                    """, (search_id,))
@@ -107,20 +120,13 @@ def get_search_by_id(search_id):
     if not row:
         return None
 
-    return {
-        "id": row[0],
-        "origin": row[1],
-        "destination": row[2],
-        "outbound_date": row[3],
-        "inbound_date": row[4],
-        "last_run_at": row[5],
-    }
+    return Search(*row)
 
 def get_searches_due():
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.exectue("""
-                   SELECT id, origin, destination, outbound_date, inbound_date
+    cursor.execute("""
+                   SELECT id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
                    FROM searches
                    WHERE last_checked IS NULL
                    OR last_checked <= NOW() - (%s * INTERVAL '1 second')
@@ -131,16 +137,7 @@ def get_searches_due():
     cursor.close()
     conn.close()
 
-    searches = []
-    for row in rows:
-        searches.append({
-            "id": row[0],
-            "origin": row[1],
-            "destination": row[2],
-            "outbound_date": row[3],
-            "inbound_date": row[4],
-            "last_run_at": row[5],
-        })
+    searches = [Search(*row) for row in rows]
 
     return searches
 
@@ -148,7 +145,7 @@ def get_subscribed_users(search_id):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-                   SELECT u.id, u.phone_number, u.is_paying
+                   SELECT u.id, u.phone_number, u.email, u.is_paying, u.subscription_expires, u.created_at
                    FROM users as u
                    WHERE EXISTS (
                     SELECT 1
@@ -162,25 +159,19 @@ def get_subscribed_users(search_id):
     cursor.close()
     conn.close()
 
-    users = []
-    for row in rows:
-        users.append({
-            "id": row[0],
-            "phone_number": row[1],
-            "is_paying": row[2]
-        })
+    users = [User(*row) for row in rows]
 
     return users
 
 def get_user_by_phone_number(phone_number):
-    onn = get_connection()
+    conn = get_connection()
     cursor = conn.cursor()
     
     cursor.execute("""
-                   SELECT id
+                   SELECT id, phone_number, email, is_paying, subscription_expires, created_at
                    FROM users
                    WHERE phone_number=%s
-                   """, phone_number)
+                   """, (phone_number,))
     
     row = cursor.fetchone()
     
@@ -189,7 +180,7 @@ def get_user_by_phone_number(phone_number):
     if not row:
         return None
     
-    return row
+    return User(*row)
 
 def update_last_run(search_id):
     conn = get_connection()
