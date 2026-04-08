@@ -10,12 +10,18 @@ def build_search_url(origin, destination, outbound_date, inbound_date= None):
 
     params = {
     "adult": 1,
-    "origin": int(str(station_ids.get(origin))),        # London Paddington
-    "destination": int(str(station_ids.get(destination))),   # Paris Gare du Nord
+    "origin": get_station_id(origin),        # London Paddington
+    "destination": get_station_id(destination),   # Paris Gare du Nord
     "outbound": outbound_date, #YYYY-MM-DD
     }
     if(inbound_date):
         params["inbound"] = inbound_date
     return f"{base_url}?{urlencode(params)}"
+
+def get_station_id(station: str) -> int | None:
+    id = station_ids.get(station)
+    if(id):
+        return int(str(id))
+    return None 
 
 # print(build_search_url("London St Pancras", "Paris Gare du Nord", "2026-04-17"))
