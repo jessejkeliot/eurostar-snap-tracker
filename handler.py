@@ -35,5 +35,6 @@ def handler():
         # TODO send a message asking for user to repeat themselves
         pass
 
+@bottle.route("/webhook/email", method="POST")
 def email_handler():
-    
+    pass
