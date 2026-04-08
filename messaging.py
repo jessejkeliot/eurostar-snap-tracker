@@ -5,6 +5,8 @@ from google.genai import types
 from models import MinimalSearch, MinimalSearchModel
 from datetime import datetime
 from dotenv import load_dotenv
+from tracker import TrainJourney
+
 load_dotenv()
 
 prompt_path = Path(__file__).resolve().parent / "prompt.txt"
@@ -14,7 +16,8 @@ if prompt_path.exists():
 else:
     systemprompt = ""
 
-def send_results_to_user(user, results):
+def send_results_to_user(user, results: list[TrainJourney]):
+    # This will eventually be a http request to the email handler?
     pass
 
 def parse_message(message):

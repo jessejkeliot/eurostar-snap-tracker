@@ -1,8 +1,10 @@
 from models import MinimalSearch
+from scheduler import search_and_send, send_to_subscribed_users
 from services import add_subscription, should_run_now
-from db import create_user_from_phone, get_search_by_id, get_user_by_phone_number
+from db import create_user_from_phone, get_search_by_id, get_user_by_phone_number, update_last_run
 from tracker import run_search
 from messaging import parse_message, send_results_to_user
+from hashlib import sha256
 # from messaging import send_results_to_user
 import bottle
 
@@ -31,8 +33,17 @@ def handler():
             # TODO need some logic here that updates the last_searched and last_result in the database but
             # Something similar to in scheduler but we should only broadcast it to other users if the last_result hash is 
             # different
-            results = run_search(ms)
-            send_results_to_user(user_id, results)
+            url, results = run_search(ms)
+            result_joined = " ".join([str(tj) for tj in results])
+            sha256_hash = sha256()
+            sha256_hash.update(str(result_joined).encode())
+            hd = sha256_hash.hexdigest()
+            if(search.last_results != hd):
+                # broadcast to all
+                send_to_subscribed_users(search.id, results)
+                update_last_run(search.id, result_joined)
+            else:
+                send_results_to_user(user_id, results)
         return "OK"
     else:
         # TODO send a message asking for user to repeat themselves

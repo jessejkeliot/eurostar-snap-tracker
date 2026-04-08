@@ -186,10 +186,7 @@ def run_search(search: MinimalSearch):
 
     results = main(url=url)
 
-    return {
-        "url": url,
-        "results": results,
-    }
+    return url,results,
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Snap Search Script")

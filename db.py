@@ -3,7 +3,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 from models import User, Search, Subscription
-
+from hashlib import sha256
 SEARCH_INTERVAL = 900  # seconds, i.e. 15 minutes
 
 load_dotenv()
@@ -216,18 +216,24 @@ def get_user_by_phone_number(phone_number):
     
     return User(*row)
 
-def update_last_run(search_id):
+def update_last_run(search_id, result_joined):
     conn = get_connection()
     cursor = conn.cursor()
     
+    sha256_hash = sha256()
+    sha256_hash.update(str(result_joined).encode())
+    hd = sha256_hash.hexdigest()
+    
     cursor.execute("""
                    UPDATE searches
-                   SET last_checked = NOW()
+                   SET last_checked = NOW(), last_result = %s
                    WHERE id = %s
-                   """, (search_id))
+                   """, (hd ,search_id,))
     conn.commit()
     cursor.close()
     conn.close()
+    
+
     
 
 
