@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import date, datetime
 from typing import Optional
+from pydantic import BaseModel, Field
+from typing import List, Optional
 
 @dataclass
 class User:
@@ -28,6 +30,12 @@ class MinimalSearch:
     destination: int
     outbound_date: date
     inbound_date: Optional[date]
+
+class MinimalSearchModel(BaseModel): # with the names for origin and destination because my parsing will be done
+    origin: str = Field(description="Origin station name")
+    destination: str = Field(description="Destination station name")
+    outbound_date: date = Field(description="Outbound travel date")
+    inbound_date: Optional[date] = Field(default=None, description="Optional inbound travel date")
 
 @dataclass
 class Subscription:
