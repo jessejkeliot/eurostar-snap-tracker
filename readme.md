@@ -64,3 +64,19 @@ If no return date is given, omit inbound_date.
 Call tracker.py with parameters. Example
 
 ``` python3 tracker.py --origin "London St Pancras" --destination "Amsterdam Centraal" --outbound_date "2026-04-08" ```
+
+## DB
+
+If we change the tables for now just drop like
+
+``` DROP DATABASE whatsnap_bot_db; ```
+
+Then set role again
+``` ALTER DATABASE whatsnap_bot_db OWNER TO whatsnap;```
+```GRANT ALL PRIVILEGES ON DATABASE whatsnap_bot_db TO whatsnap;```
+
+Creating a user:
+```CREATE USER whatsnap WITH PASSWORD 'xxxx';```
+
+Eventually should use Alembic
+[["https://alembic.sqlalchemy.org/en/latest/"]]
