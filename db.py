@@ -4,7 +4,11 @@ from dotenv import load_dotenv
 import os
 from models import User, Search, Subscription
 from hashlib import sha256
-SEARCH_INTERVAL = 900  # seconds, i.e. 15 minutes
+from datetime import datetime
+import argparse
+
+from myparse import get_station_id
+SEARCH_INTERVAL = 200  # seconds, i.e. 15 minutes
 
 load_dotenv()
 
@@ -216,6 +220,25 @@ def get_user_by_phone_number(phone_number):
     
     return User(*row)
 
+def get_user_by_id(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+                   SELECT id, phone_number, email, is_paying, subscription_expires, created_at
+                   FROM users
+                   WHERE id=%s
+                   """, (user_id,))
+    
+    row = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    if not row:
+        return None
+    
+    return User(*row)
+
 def update_last_run(search_id, result_joined):
     conn = get_connection()
     cursor = conn.cursor()
@@ -226,7 +249,7 @@ def update_last_run(search_id, result_joined):
     
     cursor.execute("""
                    UPDATE searches
-                   SET last_checked = NOW(), last_result = %s
+                   SET last_checked = NOW(), last_results = %s
                    WHERE id = %s
                    """, (hd ,search_id,))
     conn.commit()
@@ -240,8 +263,70 @@ def update_last_run(search_id, result_joined):
 
 # Example usage
 if __name__ == "__main__":
-    conn = init_postgres_db()
-    cursor = conn.cursor()
-    cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public';")
-    print("Tables in DB:", [row[0] for row in cursor.fetchall()])
-    conn.close()
+    parser = argparse.ArgumentParser(description="Manage Eurostar train tracker database")
+    
+    # Add user arguments
+    parser.add_argument("--add-user", action="store_true", help="Add a new user")
+    parser.add_argument("--phone", default=None, help="Phone number for the user")
+    parser.add_argument("--email", default=None, help="Email for the user")
+    
+    # Add search arguments
+    parser.add_argument("--add-search", action="store_true", help="Add a new search")
+    parser.add_argument("--origin", type=str, default=None, help="Origin station ID")
+    parser.add_argument("--destination", type=str, default=None, help="Destination station ID")
+    parser.add_argument("--outbound-date", default=None, help="Outbound date (YYYY-MM-DD)")
+    parser.add_argument("--inbound-date", default=None, help="Inbound date (YYYY-MM-DD)")
+    
+    # Add subscription arguments
+    parser.add_argument("--add-subscription", action="store_true", help="Add a subscription")
+    parser.add_argument("--user-id", type=int, default=None, help="User ID")
+    parser.add_argument("--search-id", type=int, default=None, help="Search ID")
+    
+    args = parser.parse_args()
+    
+    if args.add_user:
+        if not args.phone and not args.email:
+            print("Error: Must provide at least --phone or --email")
+            exit(1)
+        if args.phone:
+            user_id = create_user_from_phone(args.phone)
+            print(f"User created with ID: {user_id}")
+        if args.email:
+            user_id = create_user_from_email(args.email)
+            print(f"User created with ID: {user_id}")
+    
+    elif args.add_search:
+        if not args.origin or not args.destination or not args.outbound_date:
+            print("Error: Must provide --origin, --destination, and --outbound-date")
+            exit(1)
+        
+        outbound = datetime.strptime(args.outbound_date, "%Y-%m-%d").date()
+        inbound = None
+        if args.inbound_date:
+            inbound = datetime.strptime(args.inbound_date, "%Y-%m-%d").date()
+        origin_id = get_station_id(args.origin)
+        destination_id = get_station_id(args.destination)
+        if(not origin_id or not destination_id):
+            print("Error: At least one of the stations was invalid")
+            exit(1)
+        search = create_search(origin_id, destination_id, outbound, inbound)
+        print(f"Search created with ID: {search.id}")
+    
+    elif args.add_subscription:
+        if not args.user_id or not args.search_id:
+            print("Error: Must provide --user-id and --search-id")
+            exit(1)
+        
+        sub = create_subscription(args.user_id, args.search_id)
+        if sub:
+            print(f"Subscription created for user {args.user_id} and search {args.search_id}")
+        else:
+            print(f"Subscription already exists for user {args.user_id} and search {args.search_id}")
+    
+    else:
+        # Default behavior if no command
+        conn = init_postgres_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public';")
+        print("Tables in DB:", [row[0] for row in cursor.fetchall()])
+        conn.close()
