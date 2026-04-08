@@ -5,6 +5,8 @@ from db import (
 )
 from datetime import datetime, timedelta
 
+from models import Search
+
 SEARCH_INTERVAL = timedelta(minutes=10)
 
 def add_subscription(user_id, origin, destination, outbound_date, inbound_date):
@@ -21,9 +23,9 @@ def add_subscription(user_id, origin, destination, outbound_date, inbound_date):
     return search.id, is_new
 
 
-def should_run_now(search):
-    if not search or not search.get("last_checked"):
+def should_run_now(search: Search):
+    if not search or not search.last_checked:
         return True
 
-    next_run = search["last_checked"] + SEARCH_INTERVAL
-    return (next_run - datetime.utcnow()).total_seconds() > 120
+    next_run = search.last_checked + SEARCH_INTERVAL
+    return (next_run - datetime.now()).total_seconds() < 120
