@@ -28,6 +28,9 @@ def handler():
 
         if search and (is_new or should_run_now(search)):
             ms = MinimalSearch(search.origin, search.destination, search.outbound_date, search.inbound_date)
+            # TODO need some logic here that updates the last_searched and last_result in the database but
+            # Something similar to in scheduler but we should only broadcast it to other users if the last_result hash is 
+            # different
             results = run_search(ms)
             send_results_to_user(user_id, results)
         return "OK"

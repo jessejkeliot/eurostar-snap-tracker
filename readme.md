@@ -14,23 +14,35 @@ WhatsApp → Webhook → Store in DB
 4. It loops through stored requests
 5. Sends alerts if conditions match
 
-Serverless (Lambda) is ideal for periodic tasks
-✅ EB (EventBridge) schedules for cron‑like triggers
-✅ Store user preferences cheaply in DynamoDB or S3
-✅ Use Twilio Sandbox for initial testing (free)
+## Three Components
 
-Zip your Lambda function with dependencies:
-zip -r lambda_cleanup_postgres.zip lambda_cleanup_postgres.py
-Add psycopg2:
-Either use Lambda Layers for psycopg2
-Or package a compiled psycopg2-binary for Linux x86_64 into your zip
-Configure EventBridge:
-Schedule: daily, or every X hours
-Target: Lambda function
+Email Poller 🔄 (every 45 seconds)
+HTTP Bottle Endpoint 🔄 
+Scrape Scheduler 🔄 (every 60 seconds)
 
-gcloud sql users set-password postgres \
---instance=INSTANCE_NAME \
---password=PASSWORD
+
+### Email Poller
+
+Found in email_poller.py . It polls the gmail smtp server for new emails. Should filter to only ones with subject "train" then sends the body of the messages to the bottle endpoint.
+
+### HTTP Bottle Endpoint
+
+Found in handler.py . Is running continuously. It uses an llm call on a gemma model to parse the user's message into valid JSON form
+It then runs the also runs the tracker
+
+### Scrape Scheduler
+
+Found in scheduler.py, it gets the searches that are due for running and iterates through them and calls the tracking on them.
+It then finds the subscribed users to that search and sends an http request to the Bottle endpoint to send a message.
+
+## Google Cloud
+
+Using gcloud e2 micro vm
+
+```gcloud compute instances describe whatsnap-bot-vm```
+
+connect
+```gcloud compute ssh whatsnap-bot-vm ```
 
 From twilio:
 {
@@ -77,6 +89,14 @@ Then set role again
 
 Creating a user:
 ```CREATE USER whatsnap WITH PASSWORD 'xxxx';```
+
+logging in on vm:
+
+to super user
+```sudo -u postgres psql ```
+to the whatsnap db
+```psql -U whatsnap -h localhost -d whatsnap_bot_db```
+
 
 Eventually should use Alembic
 [["https://alembic.sqlalchemy.org/en/latest/"]]
