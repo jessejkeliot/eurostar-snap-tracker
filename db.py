@@ -69,6 +69,40 @@ def get_existing_search(origin, destination, outbound_date, inbound_date):
         return Search(*row)
     return None
 
+def create_user_from_email(email):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO users (email)
+        VALUES (%s)
+        RETURNING id
+        """,
+        (email,)
+    )
+    row = cursor.fetchone()
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return row[0]
+
+def create_user_from_phone(phone_number):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO users (phone_number)
+        VALUES (%s)
+        RETURNING id
+        """,
+        (phone_number,)
+    )
+    row = cursor.fetchone()
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return row[0]
+
 def create_search(origin, destination, outbound_date, inbound_date):
     # INSERT INTO searches ...
     conn = get_connection()
