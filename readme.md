@@ -42,9 +42,22 @@ From twilio:
 ## Current system prompt:
 Parse following text into the form { "origin": "...", "destination": "...", "outbound_date": "...", "inbound_date": "..." } Where the origin/destination can be one from ['Paris Gare du Nord', 'Amsterdam Centraal', 'Brussels', 'Lille Europe', 'Cologne Hbf', 'Rotterdam Centraal', 'London St Pancras’] and the dates must put into yyyy-mm-dd form. Also today’s date is sunday the 5th April 2026. If they don’t provide a return date don’t add an inbound date, they are just getting a single ticket. Either respond with error or with the object specified above. Don’t add any comments inside just have the plain object. Your output will be used to call a tool.
 
+## distilled prompt
+
+Extract train trip details into JSON with fields: origin, destination, outbound_date, inbound_date.
+
+Origin/destination must be one of: Paris Gare du Nord, Amsterdam Centraal, Brussels, Lille Europe, Cologne Hbf, Rotterdam Centraal, London St Pancras.
+Dates must be formatted as yyyy-mm-dd.
+Assume today is 2026-04-05.
+If no return date is given, omit inbound_date.
+
+[["https://ai.google.dev/gemini-api/docs/structured-output?example=recipe"]]
+
 [[https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api]]
 
 [["https://developers.facebook.com/documentation/business-messaging/whatsapp/get-started"]]
+
+[["https://docs.cloud.google.com/compute/docs/ip-addresses/configure-static-external-ip-address"]]
 
 ## Command Line Interface
 

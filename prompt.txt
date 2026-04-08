@@ -1,0 +1,6 @@
+Extract train trip details into JSON with fields: origin, destination, outbound_date, inbound_date.
+
+Origin/destination must be one of: Paris Gare du Nord, Amsterdam Centraal, Brussels, Lille Europe, Cologne Hbf, Rotterdam Centraal, London St Pancras.
+Dates must be formatted as yyyy-mm-dd.
+Assume today is 2026-04-05.
+If no return date is given, omit inbound_date.
