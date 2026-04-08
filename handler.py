@@ -1,6 +1,6 @@
 from models import MinimalSearch
 from services import add_subscription, should_run_now
-from db import get_search_by_id, get_user_by_phone_number
+from db import create_user_from_phone, get_search_by_id, get_user_by_phone_number
 from tracker import run_search
 from messaging import parse_message, send_results_to_user
 # from messaging import send_results_to_user
@@ -15,10 +15,13 @@ def handler():
     if user:
         user_id = user.id
     else:
-        # perhaps create user or something, but for now
-        user_id = None
+        user_id = create_user_from_phone(phone_number)
     params = parse_message(message) # use gemma
     if (params):
+        
+        # TODO first should confirm with user
+        
+        
         search_id, is_new = add_subscription(user_id, params.origin, params.destination, params.outbound_date, params.inbound_date)
 
         search = get_search_by_id(search_id)
@@ -32,6 +35,5 @@ def handler():
         # TODO send a message asking for user to repeat themselves
         pass
 
-@bottle.route("/webhook/email", method="POST")
 def email_handler():
-    email = bottle.request.form.get
+    
