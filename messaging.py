@@ -6,6 +6,11 @@ from models import MinimalSearch, MinimalSearchModel, User
 from datetime import datetime
 from dotenv import load_dotenv
 from tracker import TrainJourney
+import requests
+from db import get_user_by_id
+
+load_dotenv()
+import argparse
 
 load_dotenv()
 
@@ -16,19 +21,81 @@ if prompt_path.exists():
 else:
     systemprompt = ""
 
-def send_results_to_user(user: User, results: list[TrainJourney]):
-    # This will eventually be a http request to the email handler?
-    pass
+def send_results_to_user(user_id, results: list[TrainJourney]):
+    user = get_user_by_id(user_id)
+    if not user or not user.email:
+        return
+    
+    body = "Your train search results:\n\n"
+    for result in results:
+        body += str(result) + "\n"
+    
+    data = {
+        "to": user.email,
+        "subject": "Eurostar Train Search Results",
+        "body": body
+    }
+    
+    try:
+        response = requests.post("http://localhost:8080/send-email", json=data)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"Failed to send email: {e}")
 
-def send_retry_message_to_user(user: User):
-    # This will eventually be a http request to the email handler?
-    pass
+def send_retry_message_to_user(user_id):
+    user = get_user_by_id(user_id)
+    if not user or not user.email:
+        return
+    
+    body = "Sorry, I didn't understand your message. Please try again with a train booking request."
+    
+    data = {
+        "to": user.email,
+        "subject": "Eurostar Bot - Message Not Understood",
+        "body": body
+    }
+    
+    try:
+        response = requests.post("http://localhost:8080/send-email", json=data)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"Failed to send email: {e}")
 
-def send_message_to_user(user: User):
-    pass
+def send_message_to_user(user_id, subject, body):
+    user = get_user_by_id(user_id)
+    if not user or not user.email:
+        return
+    
+    data = {
+        "to": user.email,
+        "subject": subject,
+        "body": body
+    }
+    
+    try:
+        response = requests.post("http://localhost:8080/send-email", json=data)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"Failed to send email: {e}")
 
-def send_onboarded_message_to_user(user: User):
-    pass
+def send_onboarded_message_to_user(user_id):
+    user = get_user_by_id(user_id)
+    if not user or not user.email:
+        return
+    
+    body = "Welcome! You've been subscribed to train search notifications. You'll receive updates on your searches."
+    
+    data = {
+        "to": user.email,
+        "subject": "Welcome to Eurostar Bot",
+        "body": body
+    }
+    
+    try:
+        response = requests.post("http://localhost:8080/send-email", json=data)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"Failed to send email: {e}")
 
 def parse_message(message):
     # make gemma 4 call with our system prompt
@@ -60,7 +127,8 @@ def list_models():
 
 
 if __name__ == "__main__":
-    # list_models()
-    parse_message("Hi there I want to book a train from London to Amsterdam leaving on the 16th of april")
-
+    parser = argparse.ArgumentParser(description="Parse a message about train bookings")
+    parser.add_argument("message", nargs="?", default="Hi there I want to book a train from London to Amsterdam leaving on the 16th of april", help="Message to parse")
     
+    args = parser.parse_args()
+    parse_message(args.message)

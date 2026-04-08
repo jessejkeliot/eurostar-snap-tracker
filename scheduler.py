@@ -1,6 +1,6 @@
 from db import get_searches_due, get_subscribed_users, update_last_run
 from models import MinimalSearch, Search
-from tracker import run_search
+from tracker import TrainJourney, run_search
 from messaging import send_results_to_user
 
 def handler():
@@ -19,8 +19,8 @@ def search_and_send(search : Search):
 
     update_last_run(search.id, result_joined)
     
-def send_to_subscribed_users(search_id, results):
+def send_to_subscribed_users(search_id, results: list[TrainJourney]):
     users = get_subscribed_users(search_id)
 
     for user in users:
-        send_results_to_user(user, results)
+        send_results_to_user(user.id, results)

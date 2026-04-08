@@ -22,23 +22,26 @@ def about_trains(message: str) -> bool:
 # for the llm
 # print(station_ids.keys())
 
-def build_search_url(origin, destination, outbound_date, inbound_date= None):
+def build_search_url(origin: str | int, destination: str | int, outbound_date, inbound_date=None):
     base_url = "https://snap.eurostar.com/uk-en/search"
 
     params = {
-    "adult": 1,
-    "origin": get_station_id(origin),        # London Paddington
-    "destination": get_station_id(destination),   # Paris Gare du Nord
-    "outbound": outbound_date, #YYYY-MM-DD
+        "adult": 1,
+        "origin": get_station_id(origin),
+        "destination": get_station_id(destination),
+        "outbound": outbound_date,  # YYYY-MM-DD
     }
-    if(inbound_date):
+    if inbound_date:
         params["inbound"] = inbound_date
     return f"{base_url}?{urlencode(params)}"
 
-def get_station_id(station: str) -> int | None:
-    id = station_ids.get(station)
-    if(id):
-        return int(str(id))
-    return None 
+def get_station_id(station: str | int) -> int | None:
+    if isinstance(station, int):
+        return station
+    if isinstance(station, str) and station.isdigit():
+        return int(station)
 
-# print(build_search_url("London St Pancras", "Paris Gare du Nord", "2026-04-17"))
+    id = station_ids.get(station)
+    if id:
+        return int(str(id))
+    return None

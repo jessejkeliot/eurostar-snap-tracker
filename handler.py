@@ -6,8 +6,11 @@ from db import create_user_from_phone, get_search_by_id, get_user_by_phone_numbe
 from tracker import run_search
 from messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user
 from hashlib import sha256
-# from messaging import send_results_to_user
 import bottle
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import os
 
 @bottle.route("/webhook/whatsapp", method="POST")
 def handler():
@@ -15,14 +18,14 @@ def handler():
     message = bottle.request.form.get("Body")
     
     user = get_user_by_phone_number(phone_number) # table search
+    user_id = None
     if user:
         user_id = user.id
     else:
         user_id = create_user_from_phone(phone_number)
-    # TODO do some manual checks beefore gemma call because it might not be anything to do with trains
     train_message = about_trains(message)
-    if(not train_message and user):
-        send_retry_message_to_user(user)
+    if(not train_message):
+        send_retry_message_to_user(user_id)
         return "BAD"
     params = parse_message(message) # use gemma
     if (params):
@@ -51,7 +54,7 @@ def handler():
                 send_results_to_user(user_id, results)
             update_last_run(search.id, result_joined)
         if (not is_new):
-            send_onboarded_message_to_user(user)
+            send_onboarded_message_to_user(user_id)
         return "OK"
     else:
         # TODO send a message asking for user to repeat themselves
@@ -60,3 +63,43 @@ def handler():
 @bottle.route("/webhook/email", method="POST")
 def email_handler():
     pass
+
+@bottle.route("/send-email", method="POST")
+def send_email():
+    try:
+        data = bottle.request.json
+    except:
+        return {"error": "Invalid JSON"}
+    
+    to_email = data.get("to")
+    subject = data.get("subject")
+    body = data.get("body")
+    
+    if not to_email or not subject or not body:
+        return {"error": "Missing required fields: to, subject, body"}
+    
+    gmail_address = os.getenv("GMAIL_ADDRESS")
+    gmail_password = os.getenv("GMAIL_APP_PASSWORD")
+    
+    if not gmail_address or not gmail_password:
+        return {"error": "Gmail credentials not configured"}
+    
+    msg = MIMEMultipart()
+    msg['From'] = gmail_address
+    msg['To'] = to_email
+    msg['Subject'] = subject
+    
+    msg.attach(MIMEText(body, 'plain'))
+    
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(gmail_address, gmail_password)
+        text = msg.as_string()
+        server.sendmail(gmail_address, to_email, text)
+        server.quit()
+        return {"status": "Email sent successfully"}
+    except Exception as e:
+        return {"error": str(e)}
+
+if __name__ == "__main__":
+    bottle.run(host='localhost', port=8080, debug=True) # just for dev, should use gunicorn

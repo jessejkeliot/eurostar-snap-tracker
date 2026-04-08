@@ -74,21 +74,24 @@ def scrape(html, ret=False):
     options: list[TrainJourney] = []
     direction_sections = soup.find_all("section", {"class": MAGIC_OD_CLASS})
     print("Found direction divs:", len(direction_sections))
-    train_input_elements = direction_sections[0].find_all("input", {"class": MAGIC_INPUT_CLASS}) # outbound
-    for magic_input in train_input_elements: 
-        parent = magic_input.parent
-        if(parent):
-            div = parent.find("div", {"class": MAGIC_DIV_CLASS})
-            options.append(parse_departure(div))
-            
-    if ret and len(direction_sections) > 1:
-        train_input_elements = direction_sections[1].find_all("input", {"class": MAGIC_INPUT_CLASS}) # inbound
+    if(len(direction_sections) > 0):
+        train_input_elements = direction_sections[0].find_all("input", {"class": MAGIC_INPUT_CLASS}) # outbound
         for magic_input in train_input_elements: 
             parent = magic_input.parent
             if(parent):
                 div = parent.find("div", {"class": MAGIC_DIV_CLASS})
-                options.append(parse_departure(div, outbound=False))
-    return options
+                options.append(parse_departure(div))
+                
+        if ret and len(direction_sections) > 1:
+            train_input_elements = direction_sections[1].find_all("input", {"class": MAGIC_INPUT_CLASS}) # inbound
+            for magic_input in train_input_elements: 
+                parent = magic_input.parent
+                if(parent):
+                    div = parent.find("div", {"class": MAGIC_DIV_CLASS})
+                    options.append(parse_departure(div, outbound=False))
+        return options
+    else:
+        return []
     
 def parse_departure(div, outbound=True):
     # --- 1. Extract date from data-testid ---
@@ -178,22 +181,22 @@ def run_search(search: MinimalSearch):
     Main entry point used by the rest of the app.
     """
     url = build_search_url(
-        search.origin,
-        search.destination,
+        search.origin, # at this point is not actually an int but whatever
+        search.destination, # nor here
         search.outbound_date,
         search.inbound_date,
     )
 
     results = main(url=url)
 
-    return url,results,
+    return (url,results,)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Snap Search Script")
     parser.add_argument("--origin", required=True, help="Origin Name (e.g. 'London St Pancras')")
     parser.add_argument("--destination", required=True, help="Destination Name (e.g. 'Paris Gare du Nord')")
-    parser.add_argument("--outbound_date", required=True, help="Outbound date (YYYY-MM-DD)")
-    parser.add_argument("--inbound_date", required=False, help="Inbound date (YYYY-MM-DD)")
+    parser.add_argument("--outbound-date", required=True, help="Outbound date (YYYY-MM-DD)")
+    parser.add_argument("--inbound-date", required=False, help="Inbound date (YYYY-MM-DD)")
 
     args = parser.parse_args()
 
