@@ -1,9 +1,10 @@
 from models import MinimalSearch
+from myparse import about_trains
 from scheduler import search_and_send, send_to_subscribed_users
 from services import add_subscription, should_run_now
 from db import create_user_from_phone, get_search_by_id, get_user_by_phone_number, update_last_run
 from tracker import run_search
-from messaging import parse_message, send_results_to_user
+from messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user
 from hashlib import sha256
 # from messaging import send_results_to_user
 import bottle
@@ -18,6 +19,11 @@ def handler():
         user_id = user.id
     else:
         user_id = create_user_from_phone(phone_number)
+    # TODO do some manual checks beefore gemma call because it might not be anything to do with trains
+    train_message = about_trains(message)
+    if(not train_message and user):
+        send_retry_message_to_user(user)
+        return "BAD"
     params = parse_message(message) # use gemma
     if (params):
         
@@ -38,12 +44,14 @@ def handler():
             sha256_hash = sha256()
             sha256_hash.update(str(result_joined).encode())
             hd = sha256_hash.hexdigest()
-            if(search.last_results != hd):
+            if(not is_new and search.last_results != hd):
                 # broadcast to all
                 send_to_subscribed_users(search.id, results)
-                update_last_run(search.id, result_joined)
             else:
                 send_results_to_user(user_id, results)
+            update_last_run(search.id, result_joined)
+        if (not is_new):
+            send_onboarded_message_to_user(user)
         return "OK"
     else:
         # TODO send a message asking for user to repeat themselves

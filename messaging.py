@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from google import genai
 from google.genai import types
-from models import MinimalSearch, MinimalSearchModel
+from models import MinimalSearch, MinimalSearchModel, User
 from datetime import datetime
 from dotenv import load_dotenv
 from tracker import TrainJourney
@@ -16,8 +16,18 @@ if prompt_path.exists():
 else:
     systemprompt = ""
 
-def send_results_to_user(user, results: list[TrainJourney]):
+def send_results_to_user(user: User, results: list[TrainJourney]):
     # This will eventually be a http request to the email handler?
+    pass
+
+def send_retry_message_to_user(user: User):
+    # This will eventually be a http request to the email handler?
+    pass
+
+def send_message_to_user(user: User):
+    pass
+
+def send_onboarded_message_to_user(user: User):
     pass
 
 def parse_message(message):
