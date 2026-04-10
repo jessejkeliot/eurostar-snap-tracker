@@ -11,7 +11,7 @@ from utility import hash_for_db
 
 load_dotenv()
 
-SEARCH_INTERVAL = 200  # seconds, i.e. 15 minutes
+SEARCH_INTERVAL = 800  # seconds, i.e. 15 minutes
 
 DB_PARAMS = {
     "host": os.getenv("DB_HOST"),
@@ -211,6 +211,25 @@ def get_user_by_phone_number(phone_number):
                    FROM users
                    WHERE phone_number=%s
                    """, (phone_number,))
+    
+    row = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+    if not row:
+        return None
+    
+    return User(*row)
+
+def get_user_by_email(email):
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+                   SELECT id, phone_number, email, is_paying, subscription_expires, created_at
+                   FROM users
+                   WHERE email=%s
+                   """, (email,))
     
     row = cursor.fetchone()
     
