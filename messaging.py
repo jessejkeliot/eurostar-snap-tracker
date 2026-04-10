@@ -21,81 +21,70 @@ if prompt_path.exists():
 else:
     systemprompt = ""
 
-def send_results_to_user(user_id, results: list[TrainJourney]):
-    user = get_user_by_id(user_id)
-    if not user or not user.email:
+def send_whatsapp_message(phone_number, text):
+    token = os.getenv("WHATSAPP_TOKEN")
+    phone_id = os.getenv("WHATSAPP_PHONE_ID")
+    if not token or not phone_id:
+        print("WhatsApp credentials not configured")
         return
+        
+    url = f"https://graph.facebook.com/v17.0/{phone_id}/messages"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": phone_number,
+        "type": "text",
+        "text": {
+            "preview_url": False,
+            "body": text
+        }
+    }
     
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print(f"Failed to send WhatsApp message: {e}")
+
+def notify_user(user_id, subject, body):
+    user = get_user_by_id(user_id)
+    if not user:
+        return
+        
+    if user.phone_number:
+        send_whatsapp_message(user.phone_number, body)
+    elif user.email:
+        data = {
+            "to": user.email,
+            "subject": subject,
+            "body": body
+        }
+        try:
+            response = requests.post("http://localhost:8080/send-email", json=data)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            print(f"Failed to send email: {e}")
+
+def send_results_to_user(user_id, results: list[TrainJourney]):
     body = "Your train search results:\n\n"
     for result in results:
         body += str(result) + "\n"
-    
-    data = {
-        "to": user.email,
-        "subject": "Eurostar Train Search Results",
-        "body": body
-    }
-    
-    try:
-        response = requests.post("http://localhost:8080/send-email", json=data)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"Failed to send email: {e}")
+    notify_user(user_id, "Eurostar Train Search Results", body)
 
 def send_retry_message_to_user(user_id):
-    user = get_user_by_id(user_id)
-    if not user or not user.email:
-        return
-    
     body = "Sorry, I didn't understand your message. Please try again with a train booking request."
-    
-    data = {
-        "to": user.email,
-        "subject": "Eurostar Bot - Message Not Understood",
-        "body": body
-    }
-    
-    try:
-        response = requests.post("http://localhost:8080/send-email", json=data)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"Failed to send email: {e}")
+    notify_user(user_id, "Eurostar Bot - Message Not Understood", body)
 
 def send_message_to_user(user_id, subject, body):
-    user = get_user_by_id(user_id)
-    if not user or not user.email:
-        return
-    
-    data = {
-        "to": user.email,
-        "subject": subject,
-        "body": body
-    }
-    
-    try:
-        response = requests.post("http://localhost:8080/send-email", json=data)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"Failed to send email: {e}")
+    notify_user(user_id, subject, body)
 
 def send_onboarded_message_to_user(user_id):
-    user = get_user_by_id(user_id)
-    if not user or not user.email:
-        return
-    
     body = "Welcome! You've been subscribed to train search notifications. You'll receive updates on your searches."
-    
-    data = {
-        "to": user.email,
-        "subject": "Welcome to Eurostar Bot",
-        "body": body
-    }
-    
-    try:
-        response = requests.post("http://localhost:8080/send-email", json=data)
-        response.raise_for_status()
-    except requests.RequestException as e:
-        print(f"Failed to send email: {e}")
+    notify_user(user_id, "Welcome to Eurostar Bot", body)
 
 def parse_message(message):
     # make gemma 4 call with our system prompt
