@@ -35,6 +35,8 @@ It then runs the also runs the tracker
 Found in scheduler.py, it gets the searches that are due for running and iterates through them and calls the tracking on them.
 It then finds the subscribed users to that search and sends an http request to the Bottle endpoint to send a message.
 
+Should have it where tickets for a longer period away are checked less often. Ranging from every 22 mins to every 12
+
 ## Google Cloud
 
 Using gcloud e2 micro vm
