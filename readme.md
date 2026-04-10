@@ -14,6 +14,33 @@ WhatsApp → Webhook → Store in DB
 4. It loops through stored requests
 5. Sends alerts if conditions match
 
+### How to run (subject to change)
+Must set up a .env file. Use the .env.sample file and fill in with your own api keys and database information.
+If you are running on macos you must make a python virtual environment and then activate it in the terminal with
+
+``` source ~/venv/bin/activate ```
+
+Then install the requirements with
+
+``` pip3 install -r requirements.txt ```
+
+If first time running run
+``` python3 init_db.py ```
+
+Then in three (two right now) seperate terminal tabs or windows.
+1. Start up the bottle api endpoint in **handler.py** by running
+``` python3 handler.py ```
+2. Start up the faux-cron python script **pycron.py**
+
+### Adding Users, Searches and Subscriptions Manually
+
+You can pass arguments in to run INSERT statements on the db in the command line like:
+``` db.py --add-user --email james@hotmail.com ```
+The user id will be printed which you can subsequently use in the add subscription tool
+```python3 db.py --add-search --origin "Paris Gare du Nord" --destination "London St Pancras" --outbound-date "2026-04-23"```
+Link them so james gets updates about Trains from Paris -> London on the 23 of April.
+```python3 db.py --add-subscription --user-id 1 --search-id 2 ```
+
 ## Three Components
 
 Email Poller 🔄 (every 45 seconds)
