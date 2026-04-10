@@ -2,10 +2,15 @@ from db import get_searches_due, get_subscribed_users, hash_for_db, update_last_
 from models import MinimalSearch, Search
 from tracker import TrainJourney, run_search
 from messaging import send_results_to_user
-
+from datetime import datetime, timedelta
 def handler():
     searches = get_searches_due()
+    handle_search(searches)
 
+def handle_search(searches: list[Search]):
+    # filter the searches
+    today = datetime.now()
+    search = [search for search in searches if (search.outbound_date - timedelta(days=15) < today)]
     for search in searches:
         # create a minimal search object that only contains the data needed for constructing a search url
         search_and_send(search)
