@@ -9,9 +9,9 @@ def handler():
 
 def handle_search(searches: list[Search]):
     # filter the searches
-    today = datetime.now()
-    search = [search for search in searches if (search.outbound_date - timedelta(days=15) < today)]
-    for search in searches:
+    today = datetime.now().date()
+    filtered = [search for search in searches if (search.outbound_date - timedelta(days=15) < today)]
+    for search in filtered:
         # create a minimal search object that only contains the data needed for constructing a search url
         search_and_send(search)
         
