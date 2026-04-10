@@ -154,6 +154,7 @@ def main(url = URL):
         return journeys
     else:
         print("Failed to fetch page")
+    print("\n")
     emptyList : list[TrainJourney] = []
     return emptyList
     while False:
