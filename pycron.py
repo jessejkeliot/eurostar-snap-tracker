@@ -4,4 +4,4 @@ from scheduler import handler
 
 while True:
     handler()
-    sleep(60 * 18)
+    sleep(60)

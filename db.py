@@ -3,14 +3,15 @@ from pathlib import Path
 from dotenv import load_dotenv
 import os
 from models import User, Search, Subscription
-from hashlib import sha256
 from datetime import datetime
 import argparse
 
 from myparse import get_station_id
-SEARCH_INTERVAL = 200  # seconds, i.e. 15 minutes
+from services import hash_for_db
 
 load_dotenv()
+
+SEARCH_INTERVAL = 200  # seconds, i.e. 15 minutes
 
 DB_PARAMS = {
     "host": os.getenv("DB_HOST"),
@@ -240,18 +241,31 @@ def get_user_by_id(user_id):
     return User(*row)
 
 def update_last_run(search_id, result_joined):
+    # This updates the last_checked time for a search and the last results
     conn = get_connection()
     cursor = conn.cursor()
     
-    sha256_hash = sha256()
-    sha256_hash.update(str(result_joined).encode())
-    hd = sha256_hash.hexdigest()
+    hd = hash_for_db(result_joined)
     
     cursor.execute("""
                    UPDATE searches
                    SET last_checked = NOW(), last_results = %s
                    WHERE id = %s
                    """, (hd ,search_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def update_last_checked(search_id):
+    # this only updates the last checked time
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+                   UPDATE searches
+                   SET last_checked = NOW()
+                   WHERE id = %s
+                   """, (search_id,))
     conn.commit()
     cursor.close()
     conn.close()
