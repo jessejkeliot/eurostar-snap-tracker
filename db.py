@@ -269,13 +269,9 @@ def update_last_checked(search_id):
     conn.commit()
     cursor.close()
     conn.close()
-    
-
-    
 
 
-
-# Example usage
+# CLI tool
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Manage Eurostar train tracker database")
     
