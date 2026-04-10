@@ -1,6 +1,5 @@
-from db import get_searches_due, get_subscribed_users, update_last_checked, update_last_run
+from db import get_searches_due, get_subscribed_users, hash_for_db, update_last_checked, update_last_run
 from models import MinimalSearch, Search
-from services import hash_for_db
 from tracker import TrainJourney, run_search
 from messaging import send_results_to_user
 

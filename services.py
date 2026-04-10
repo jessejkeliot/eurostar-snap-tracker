@@ -1,5 +1,3 @@
-from hashlib import sha256
-
 from db import (
     get_existing_search,
     create_search,
@@ -32,7 +30,3 @@ def should_run_now(search: Search):
     next_run = search.last_checked + SEARCH_INTERVAL
     return (next_run - datetime.now()).total_seconds() < 120
 
-def hash_for_db(to_hash: str):
-    sha256_hash = sha256()
-    sha256_hash.update(to_hash.encode())
-    return sha256_hash.hexdigest()

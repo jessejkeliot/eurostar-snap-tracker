@@ -1,11 +1,10 @@
 from models import MinimalSearch
 from myparse import about_trains
 from scheduler import search_and_send, send_to_subscribed_users
-from services import add_subscription, hash_for_db, should_run_now
-from db import create_user_from_phone, get_search_by_id, get_user_by_phone_number, update_last_run
+from services import add_subscription, should_run_now
+from db import create_user_from_phone, get_search_by_id, get_user_by_phone_number, hash_for_db, update_last_run
 from tracker import run_search
 from messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user
-from hashlib import sha256
 import bottle
 import smtplib
 from email.mime.text import MIMEText

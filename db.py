@@ -7,7 +7,7 @@ from datetime import datetime
 import argparse
 
 from myparse import get_station_id
-from services import hash_for_db
+from utility import hash_for_db
 
 load_dotenv()
 
