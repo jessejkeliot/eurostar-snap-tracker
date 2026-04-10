@@ -27,10 +27,13 @@ Then install the requirements with
 If first time running run
 ``` python3 init_db.py ```
 
-Then in three (two right now) seperate terminal tabs or windows.
-1. Start up the bottle api endpoint in **handler.py** by running
+Then in three separate terminal tabs or windows:
+1. Start up the bottle API endpoint in **handler.py** by running:
 ``` python3 handler.py ```
-2. Start up the faux-cron python script **pycron.py**
+2. Start up the faux-cron python script in **pycron.py** by running:
+``` python3 pycron.py ```
+3. Start up the email poller in **email_poller.py** by running:
+``` python3 email_poller.py ```
 
 ### Adding Users, Searches and Subscriptions Manually
 
