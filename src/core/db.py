@@ -368,6 +368,19 @@ def update_last_checked(search_id):
     cursor.close()
     conn.close()
 
+def elevate_user_to_paid(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+    UPDATE users
+    SET is_paying=TRUE
+    WHERE id=%s
+    """, (user_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    print(f"Elevated user {user_id} to paid")
+
 
 # CLI tool
 if __name__ == "__main__":
