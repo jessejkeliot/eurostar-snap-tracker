@@ -2,10 +2,13 @@ from src.core.db import get_user_by_id, get_subscribed_users, create_user_from_p
 from src.scraper.tracker import run_search
 from src.bot.messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user, send_message_to_user
 from src.core.mailer import send_gmail_message
+from src.core.log_config import get_logger
 import bottle
 import os
 import stripe
 from datetime import timedelta, datetime
+
+logger = get_logger(__name__)
 
 def process_message(user_id, message):
     print(f"DEBUG: 🔄 Starting process_message for user {user_id}")
