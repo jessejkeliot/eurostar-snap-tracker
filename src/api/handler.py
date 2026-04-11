@@ -198,6 +198,7 @@ def send_email():
     to_email = data.get("to")
     subject = data.get("subject")
     body = data.get("body")
+    html_body = data.get("html_body")
     
     if not to_email or not subject or not body:
         return {"error": "Missing required fields: to, subject, body"}
@@ -208,12 +209,14 @@ def send_email():
     if not gmail_address or not gmail_password:
         return {"error": "Gmail credentials not configured"}
     
-    msg = MIMEMultipart()
+    msg = MIMEMultipart('alternative')
     msg['From'] = gmail_address
     msg['To'] = to_email
     msg['Subject'] = subject
     
     msg.attach(MIMEText(body, 'plain'))
+    if html_body:
+        msg.attach(MIMEText(html_body, 'html'))
     
     try:
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
