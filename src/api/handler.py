@@ -1,7 +1,6 @@
 from src.core.models import MinimalSearch
-from src.core.services import should_run_now
-from src.core.services import add_subscription
-from src.bot.myparse import about_trains
+from src.core.services import should_run_now, add_subscription
+from src.bot.myparse import about_trains, get_station_name
 from src.core.db import get_user_by_id, get_subscribed_users, create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user, get_abuse_strikes, increment_abuse_strikes, reset_abuse_strikes
 from src.scraper.tracker import run_search
 from src.bot.messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user, send_message_to_user
@@ -66,27 +65,39 @@ def process_message(user_id, message):
         
         for params in params_list:
             print(f"DEBUG: 📝 Subscribing user {user_id} to {params.outbound_date}")
-            search_id, is_new = add_subscription(user_id, params.origin, params.destination, params.outbound_date, params.inbound_date)
+            search_id, is_sub_new = add_subscription(user_id, params.origin, params.destination, params.outbound_date, params.inbound_date)
             search = get_search_by_id(search_id)
+            
+            origin_name = get_station_name(params.origin)
+            dest_name = get_station_name(params.destination)
 
-            if not is_new:
+            if not is_sub_new:
                 existing_dates_message = True
 
-            if search and (is_new or should_run_now(search)):
+            if search and (is_sub_new or should_run_now(search)):
                 print(f"DEBUG: 🔍 Running search {search_id} now.")
                 ms = MinimalSearch(search.origin, search.destination, search.outbound_date, search.inbound_date)
                 url, results = run_search(ms)
                 print(f"DEBUG: 🎫 Found {len(results)} tickets.")
+                
+                # Use str(tj) for consistent database hashing
                 result_joined = " ".join([str(tj) for tj in results])
                 hd = hash_for_db(result_joined)
-                if(not is_new and search.last_results != hd):
-                    print(f"DEBUG: 📢 Broadast results for search {search_id}")
-                    # broadcast to all
+                
+                # Check if results actually changed
+                hash_changed = (search.last_results != hd)
+                
+                if hash_changed:
+                    print(f"DEBUG: 📢 Results changed for search {search_id}. Broadcasting to all.")
                     users = get_subscribed_users(search.id)
                     for u in users:
-                        send_results_to_user(u.id, results, url)
+                        send_results_to_user(u.id, results, url, origin_name, dest_name)
+                elif is_sub_new:
+                    print(f"DEBUG: 📨 Results unchanged but user {user_id} is new. Sending initial alert.")
+                    send_results_to_user(user_id, results, url, origin_name, dest_name)
                 else:
-                    send_results_to_user(user_id, results, url)
+                    print(f"DEBUG: 🤐 Results unchanged and user {user_id} already subscribed. Staying silent.")
+
                 update_last_run(search.id, result_joined)
                 
         if existing_dates_message:

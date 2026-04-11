@@ -142,9 +142,7 @@ def create_subscription(user_id, search_id):
     conn.commit()
     cursor.close()
     conn.close()
-    if row:
-        return Subscription(*row)
-    return None
+    return row is not None
 
 def get_search_by_id(search_id):
     conn =  get_connection()

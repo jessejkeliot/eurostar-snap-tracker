@@ -1,7 +1,8 @@
-from src.core.db import get_searches_due, get_subscribed_users, hash_for_db, update_last_checked, update_last_run
+from src.core.db import get_searches_due, get_active_searches, get_subscribed_users, hash_for_db, update_last_checked, update_last_run
 from src.core.models import MinimalSearch, Search
 from src.scraper.tracker import TrainJourney, run_search
 from src.bot.messaging import send_results_to_user
+from src.bot.myparse import build_search_url, get_station_name
 from datetime import datetime, timedelta
 from src.core.log_config import get_logger
 
@@ -13,9 +14,12 @@ def handler():
         url, results, results_string, has_changed = check_for_search_updates(search)
         
         if has_changed:
+            origin_name = get_station_name(search.origin)
+            dest_name = get_station_name(search.destination)
+            
             users = get_subscribed_users(search.id)
             for user in users:
-                send_results_to_user(user.id, results, url)
+                send_results_to_user(user.id, results, url, origin_name, dest_name)
                 
             update_last_run(search.id, results_string)
         else:

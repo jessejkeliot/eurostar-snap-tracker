@@ -71,7 +71,7 @@ def generate_html_email(subject, body):
         if 'http' in line_stripped:
             line_stripped = re.sub(
                 r'(https?://[^\s]+)', 
-                r'<br><a href="\1" style="display: inline-block; padding: 14px 28px; background-color: #001A70; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 15px; margin-bottom: 15px; font-size: 16px;">🚀 Upgrade to Premium</a><br>', 
+                r'<div style="text-align: center;"><a href="\1" style="display: inline-block; padding: 14px 28px; background-color: #001A70; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: bold; margin-top: 15px; margin-bottom: 15px; font-size: 16px;">🚀 Book Now</a></div>', 
                 line_stripped
             )
         html_paragraphs.append(f'<p style="margin: 0 0 10px 0;">{line_stripped}</p>')
@@ -108,7 +108,7 @@ def notify_user(user_id, subject, body):
         if not success:
             logger.error(f"Failed to send email: {error}")
 
-def send_results_to_user(user_id, results: list[TrainJourney], url: str = None):
+def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, origin_name: str = None, dest_name: str = None):
     user = get_user_by_id(user_id)
     if not user:
         return
@@ -117,10 +117,14 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None):
     
     # Build ONE combined body — fixes double-email bug where N results caused N emails
     body = "\n".join(str(r) for r in results)
+    # Append buy link if we have one
     if url:
-        body += f"\n\n🔗 Book now: {url}"
+        body += f"\n\n{url}"
 
-    subject = "🚨 Eurostar Snap Ticket Found!"
+    if origin_name and dest_name:
+        subject = f"🚨 Ticket Found: {origin_name} to {dest_name}"
+    else:
+        subject = "🚨 Eurostar Snap Ticket Found!"
     
     if user.is_paying:
         notify_user(user_id, subject, f"⚡ Priority Alert:\n\n{body}\n\n💸 You've saved £120+ already!")
@@ -130,7 +134,7 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None):
     else:
         paywall_msg = (
             "🚨 Snap ticket found:\n\n"
-            f"{body}\n"
+            f"{body}\n\n"
             "You’ve used your free alerts 👀\n"
             "You’re seeing this 10 minutes later than premium users ⏱️\n\n"
             "Upgrade for:\n"

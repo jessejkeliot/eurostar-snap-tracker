@@ -45,3 +45,11 @@ def get_station_id(station: str | int) -> int | None:
     if id:
         return int(str(id))
     return None
+
+def get_station_name(station_id: int | str) -> str | None:
+    # Reverse lookup 
+    target_id = str(station_id)
+    for name, sid in station_ids.items():
+        if sid == target_id:
+            return name
+    return None

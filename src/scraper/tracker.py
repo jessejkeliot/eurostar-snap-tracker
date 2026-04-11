@@ -134,6 +134,11 @@ class TrainJourney:
         self.late_time = late_time
         self.price = price
         self.currency = currency
+    def __str__(self):
+        # Stable string for hashing - do NOT change this format or it will trigger duplicate emails
+        direction = 'Outbound' if self.outbound else 'Return'
+        return f"{direction}|{self.date}|{self.early_time}-{self.late_time}|{self.price}|{self.currency}"
+
     def __repr__(self):
         direction = 'Return' if not self.outbound else 'Outbound'
         price_str = f"{self.currency}{self.price}" if self.price else "No price found"
