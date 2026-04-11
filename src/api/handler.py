@@ -1,3 +1,4 @@
+from src.bot.myparse import about_trains
 from src.core.db import get_user_by_id, get_subscribed_users, create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user, get_abuse_strikes, increment_abuse_strikes, reset_abuse_strikes
 from src.scraper.tracker import run_search
 from src.bot.messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user, send_message_to_user
