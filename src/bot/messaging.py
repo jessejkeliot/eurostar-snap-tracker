@@ -107,6 +107,29 @@ def notify_user(user_id, subject, body):
         success, error = send_gmail_message(user.email, subject, body, html_body)
         if not success:
             logger.error(f"Failed to send email: {error}")
+def format_ticket_results(results: list[TrainJourney], origin_name, dest_name):
+    if not results:
+        return ""
+    
+    # Extract date and find best price
+    travel_date = results[0].date
+    min_price = min(float(r.price) for r in results)
+    currency = results[0].currency or "£"
+    
+    # Inviting Header
+    header = f"🎉 Great news! We found {len(results)} deals for your trip!\n\n"
+    header += f"📍 Route: {origin_name} ➔ {dest_name}\n"
+    header += f"📅 Date: {travel_date}\n"
+    header += f"✨ Best Price: {currency}{min_price:.2f}\n"
+    
+    # Ticket List
+    ticket_lines = ["\nAvailable Departures:"]
+    for r in results:
+        direction = 'Outbound' if r.outbound else 'Return'
+        price_display = f"{r.currency}{float(r.price):.2f}"
+        ticket_lines.append(f"• 🎫 {r.early_time} - {r.late_time} | {price_display} per person")
+    
+    return header + "\n".join(ticket_lines)
 
 def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, origin_name: str = None, dest_name: str = None):
     # SILENCE IS GOLDEN: Do not send email if no results found
@@ -120,8 +143,9 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, 
         
     trial = get_user_trial(user_id)
     
-    # Build ONE combined body — fixes double-email bug where N results caused N emails
-    body = "\n".join(str(r) for r in results)
+    # Build ONE combined body — inviting and information rich
+    body = format_ticket_results(results, origin_name or "Unknown", dest_name or "Unknown")
+    
     # Append buy link if we have one
     if url:
         body += f"\n\n{url}"
