@@ -4,8 +4,8 @@ import requests
 from bs4 import BeautifulSoup
 import time
 import re
-from models import MinimalSearch, Search
-from myparse import build_search_url
+from src.core.models import MinimalSearch, Search
+from src.bot.myparse import build_search_url
 
 URL = "https://snap.eurostar.com/uk-en/search?adult=1&origin=7015400&destination=8727100&outbound=2026-04-08&outslot=13%3A00"
 MAGIC_INPUT_CLASS = "css-1ci7kll"
