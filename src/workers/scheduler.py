@@ -23,10 +23,11 @@ def handler():
             logger.info(f"On latest run of search (id: {search.id}) the results have not changed")
 
 def get_active_searches() -> list[Search]:
-    """Retrieves searches that are due and within the 15-day active window."""
+    """Retrieves searches that are due and within the 15-day active window (today to today+15)."""
     searches = get_searches_due()
     today = datetime.now().date()
-    return [search for search in searches if (search.outbound_date - timedelta(days=15) < today)]
+    # Only track searches where the outbound date is today or up to 15 days in the future
+    return [search for search in searches if today <= search.outbound_date <= (today + timedelta(days=15))]
 
 def check_for_search_updates(search: Search) -> tuple[list[TrainJourney], str, bool]:
     """Executes the search and checks if the results differ from the last run."""
