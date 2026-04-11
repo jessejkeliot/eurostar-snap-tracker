@@ -390,6 +390,9 @@ if __name__ == "__main__":
     parser.add_argument("--add-user", action="store_true", help="Add a new user")
     parser.add_argument("--phone", default=None, help="Phone number for the user")
     parser.add_argument("--email", default=None, help="Email for the user")
+
+    parser.add_argument("--elevate-user", action="store_true", help="Elevate a user to paid")
+    parser.add_argument("--user-id", type=int, default=None, help="User ID")
     
     # Add search arguments
     parser.add_argument("--add-search", action="store_true", help="Add a new search")
@@ -415,6 +418,12 @@ if __name__ == "__main__":
         if args.email:
             user_id = create_user_from_email(args.email)
             print(f"User created with ID: {user_id}")
+
+    elif args.elevate_user:
+        if not args.user_id:
+            print("Error: Must provide --user-id")
+            exit(1)
+        elevate_user_to_paid(args.user_id)
     
     elif args.add_search:
         if not args.origin or not args.destination or not args.outbound_date:
