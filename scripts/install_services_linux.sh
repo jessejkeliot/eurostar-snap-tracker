@@ -43,7 +43,8 @@ After=network.target
 [Service]
 User=$APP_USER
 WorkingDirectory=$PROJECT_DIR
-ExecStart=$GUNICORN_PATH -w 2 -b 0.0.0.0:8080 handler:app
+Environment="PYTHONPATH=$PROJECT_DIR"
+ExecStart=$GUNICORN_PATH -w 2 -b 0.0.0.0:8080 src.api.handler:app
 Restart=always
 RestartSec=5
 
@@ -60,7 +61,8 @@ After=network.target
 [Service]
 User=$APP_USER
 WorkingDirectory=$PROJECT_DIR
-ExecStart=$PYTHON_PATH pycron.py
+Environment="PYTHONPATH=$PROJECT_DIR"
+ExecStart=$PYTHON_PATH -m src.workers.pycron
 Restart=always
 RestartSec=10
 
@@ -77,7 +79,8 @@ After=network.target
 [Service]
 User=$APP_USER
 WorkingDirectory=$PROJECT_DIR
-ExecStart=$PYTHON_PATH email_poller.py
+Environment="PYTHONPATH=$PROJECT_DIR"
+ExecStart=$PYTHON_PATH -m src.workers.email_poller
 Restart=always
 RestartSec=10
 

@@ -25,23 +25,23 @@ Then install the requirements with
 ``` pip3 install -r requirements.txt ```
 
 If first time running run
-``` python3 init_db.py ```
+``` PYTHONPATH=. python3 src/core/init_db.py ```
 
 Then in three separate terminal tabs or windows:
 1. Start up the bottle API endpoint in **handler.py** using gunicorn by running:
-``` gunicorn -w 2 -b 0.0.0.0:8080 handler:app ```
+``` PYTHONPATH=. gunicorn -w 2 -b 0.0.0.0:8080 src.api.handler:app ```
 2. Start up the faux-cron python script in **pycron.py** by running:
-``` python3 pycron.py ```
+``` PYTHONPATH=. python3 -m src.workers.pycron ```
 3. Start up the email poller in **email_poller.py** by running:
-``` python3 email_poller.py ```
+``` PYTHONPATH=. python3 -m src.workers.email_poller ```
 
 ### How to Run on Linux (Google Cloud e2-micro / Ubuntu)
 
-For production environments, you should run the services via `systemd` so they automatically restart if the machine reboots or the processes crash. We've included a script to do this automatically.
+For production environments, you should run the services via `systemd` so they automatically restart if the machine reboots or the processes crash. We've included a script in `scripts/` to do this automatically.
 
 Once you have cloned the project on your server and activated the virtual environment:
 1. Run the deployment script with sudo:
-``` sudo bash install_services_linux.sh ```
+``` sudo bash scripts/install_services_linux.sh ```
 2. The script will dynamically generate `.service` wrappers and boot Gunicorn + Pycron + the Email Poller instantly into the background.
 
 To check up on the running logs, you can use built-in journalctl commands:
@@ -61,11 +61,11 @@ All python microservices are hooked up to a centralized logging system. You can 
 ### Adding Users, Searches and Subscriptions Manually
 
 You can pass arguments in to run INSERT statements on the db in the command line like:
-``` db.py --add-user --email james@hotmail.com ```
+``` PYTHONPATH=. python3 src/core/db.py --add-user --email james@hotmail.com ```
 The user id will be printed which you can subsequently use in the add subscription tool
-```python3 db.py --add-search --origin "Paris Gare du Nord" --destination "London St Pancras" --outbound-date "2026-04-23"```
+``` PYTHONPATH=. python3 src/core/db.py --add-search --origin "Paris Gare du Nord" --destination "London St Pancras" --outbound-date "2026-04-23"```
 Link them so james gets updates about Trains from Paris -> London on the 23 of April.
-```python3 db.py --add-subscription --user-id 1 --search-id 2 ```
+``` PYTHONPATH=. python3 src/core/db.py --add-subscription --user-id 1 --search-id 2 ```
 
 ## Three Components
 
@@ -130,7 +130,7 @@ If no return date is given, omit inbound_date.
 
 Call tracker.py with parameters. Example
 
-``` python3 tracker.py --origin "London St Pancras" --destination "Amsterdam Centraal" --outbound_date "2026-04-08" ```
+``` PYTHONPATH=. python3 -m src.scraper.tracker --origin "London St Pancras" --destination "Amsterdam Centraal" --outbound_date "2026-04-08" ```
 
 ## DB
 

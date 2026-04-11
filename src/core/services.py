@@ -1,11 +1,11 @@
-from db import (
+from src.core.db import (
     get_existing_search,
     create_search,
     create_subscription,
 )
 from datetime import datetime, timedelta
 
-from models import Search
+from src.core.models import Search
 
 SEARCH_INTERVAL = timedelta(minutes=10)
 

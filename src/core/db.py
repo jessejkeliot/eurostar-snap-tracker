@@ -6,8 +6,8 @@ from models import User, Search, Subscription, Trial
 from datetime import datetime
 import argparse
 
-from myparse import get_station_id
-from utility import hash_for_db
+from src.bot.myparse import get_station_id
+from src.core.utility import hash_for_db
 
 load_dotenv()
 
@@ -21,7 +21,7 @@ DB_PARAMS = {
     "password": os.getenv("DB_PASSWORD"),
 }
 
-SCHEMA_FILE = "schema.sql"
+SCHEMA_FILE = os.path.join(os.path.dirname(__file__), "../../resources/schema.sql")
 
 def get_connection():
     return psycopg2.connect(**DB_PARAMS)

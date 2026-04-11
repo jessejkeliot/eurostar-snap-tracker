@@ -1,10 +1,10 @@
-from db import get_subscribed_users
-from models import MinimalSearch
-from myparse import about_trains
-from services import add_subscription, should_run_now
-from db import create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user, get_abuse_strikes, increment_abuse_strikes, reset_abuse_strikes
-from tracker import run_search
-from messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user, send_message_to_user
+from src.core.db import get_subscribed_users
+from src.core.models import MinimalSearch
+from src.bot.myparse import about_trains
+from src.core.services import add_subscription, should_run_now
+from src.core.db import create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user, get_abuse_strikes, increment_abuse_strikes, reset_abuse_strikes
+from src.scraper.tracker import run_search
+from src.bot.messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user, send_message_to_user
 import bottle
 import smtplib
 from email.mime.text import MIMEText
@@ -176,7 +176,7 @@ def stripe_webhook():
             expires = datetime.now().date() + timedelta(days=30)
             set_user_paid(user_id, expires)
             
-            from messaging import notify_user
+            from src.bot.messaging import notify_user
             msg = (
                 "✅ You’re now on premium\n\n"
                 "You’ll get:\n"

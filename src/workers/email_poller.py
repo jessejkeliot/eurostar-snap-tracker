@@ -3,7 +3,7 @@ import email
 import os
 import requests
 import time
-from log_config import get_logger
+from src.core.log_config import get_logger
 
 logger = get_logger(__name__)
 from dotenv import load_dotenv

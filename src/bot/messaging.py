@@ -2,17 +2,17 @@ import os
 from pathlib import Path
 from google import genai
 from google.genai import types
-from models import MinimalSearch, MinimalSearchModel, User
+from src.core.models import MinimalSearch, MinimalSearchModel, User
 from datetime import datetime
 from dotenv import load_dotenv
-from tracker import TrainJourney
+from src.scraper.tracker import TrainJourney
 import requests
 import threading
-from myparse import get_station_id
-from log_config import get_logger
+from src.bot.myparse import get_station_id
+from src.core.log_config import get_logger
 
 logger = get_logger(__name__)
-from db import get_user_by_id, get_user_trial, increment_user_trial
+from src.core.db import get_user_by_id, get_user_trial, increment_user_trial
 
 load_dotenv()
 import argparse
