@@ -137,6 +137,7 @@ def email_handler():
         data = bottle.request.json
         email_address = data.get("from")
         message = data.get("body")
+        print(f"DEBUG: 📧 Incoming email from {email_address}")
         logger.info(f"📧 Received email webhook from {email_address}. Processing...")
         
         user = get_user_by_email(email_address)
