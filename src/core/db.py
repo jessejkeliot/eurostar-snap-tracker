@@ -2,7 +2,7 @@ import psycopg2
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-from models import User, Search, Subscription, Trial
+from src.core.models import User, Search, Subscription, Trial
 from datetime import datetime
 import argparse
 
