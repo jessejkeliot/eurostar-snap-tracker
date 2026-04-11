@@ -2,7 +2,7 @@ from db import get_subscribed_users
 from models import MinimalSearch
 from myparse import about_trains
 from services import add_subscription, should_run_now
-from db import create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user
+from db import create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user, get_abuse_strikes, increment_abuse_strikes, reset_abuse_strikes
 from tracker import run_search
 from messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user, send_message_to_user
 import bottle
@@ -14,6 +14,11 @@ import stripe
 from datetime import timedelta, datetime
 
 def process_message(user_id, message):
+    strikes = get_abuse_strikes(user_id)
+    if strikes >= 3:
+        # User has repeatedly forced failures. Ignore silently to conserve LLM/WhatsApp API quota.
+        return "IGNORED_ABUSE"
+
     msg_lower = message.strip().lower()
     if msg_lower in ["stop", "unsubscribe", "cancel", "quit", "halt", "end", "remove"]:
         delete_all_subscriptions_for_user(user_id)
@@ -22,10 +27,13 @@ def process_message(user_id, message):
         
     train_message = about_trains(message)
     if(not train_message):
+        increment_abuse_strikes(user_id)
         send_retry_message_to_user(user_id)
         return "BAD"
+    
     params = parse_message(message) # use gemma
     if (params):
+        reset_abuse_strikes(user_id)
         search_id, is_new = add_subscription(user_id, params.origin, params.destination, params.outbound_date, params.inbound_date)
         search = get_search_by_id(search_id)
 
@@ -46,8 +54,10 @@ def process_message(user_id, message):
             send_onboarded_message_to_user(user_id)
         return "OK"
     else:
-        # TODO send a message asking for user to repeat themselves
-        pass
+        # LLM parsing failed despite passing regex
+        increment_abuse_strikes(user_id)
+        send_retry_message_to_user(user_id)
+        return "BAD"
 
 @bottle.route("/webhook/whatsapp", method="GET")
 def verify_whatsapp_webhook():

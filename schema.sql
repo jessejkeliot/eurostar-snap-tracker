@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS users (
     phone_number TEXT UNIQUE,
     email TEXT UNIQUE,
     is_paying BOOLEAN DEFAULT FALSE,
+    abuse_strikes INTEGER DEFAULT 0,
     subscription_expires DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     CHECK (email IS NOT NULL OR phone_number IS NOT NULL)

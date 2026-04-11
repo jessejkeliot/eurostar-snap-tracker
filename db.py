@@ -261,6 +261,31 @@ def get_user_by_id(user_id):
     
     return User(*row)
 
+def get_abuse_strikes(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT abuse_strikes FROM users WHERE id = %s", (user_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    return row[0] if row else 0
+
+def increment_abuse_strikes(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET abuse_strikes = abuse_strikes + 1 WHERE id = %s", (user_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def reset_abuse_strikes(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET abuse_strikes = 0 WHERE id = %s", (user_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
 def set_user_paid(user_id, expires_date=None):
     conn = get_connection()
     cursor = conn.cursor()
