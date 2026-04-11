@@ -135,7 +135,9 @@ class TrainJourney:
         self.price = price
         self.currency = currency
     def __repr__(self):
-        return f"{'Return ' if not self.outbound else ''}TrainDeparture(date={self.date}, early={self.early_time}, late={self.late_time}, price={self.price})"
+        direction = 'Return' if not self.outbound else 'Outbound'
+        price_str = f"{self.currency}{self.price}" if self.price else "No price found"
+        return f"{direction} | {self.date} | {self.early_time}–{self.late_time} | {price_str}"
     
 
 def main(url = URL):

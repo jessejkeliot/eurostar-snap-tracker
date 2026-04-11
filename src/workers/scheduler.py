@@ -10,12 +10,12 @@ def handler():
     active_searches = get_active_searches()
     
     for search in active_searches:
-        results, results_string, has_changed = check_for_search_updates(search)
+        url, results, results_string, has_changed = check_for_search_updates(search)
         
         if has_changed:
             users = get_subscribed_users(search.id)
             for user in users:
-                send_results_to_user(user.id, results)
+                send_results_to_user(user.id, results, url)
                 
             update_last_run(search.id, results_string)
         else:
@@ -29,7 +29,7 @@ def get_active_searches() -> list[Search]:
     # Only track searches where the outbound date is today or up to 15 days in the future
     return [search for search in searches if today <= search.outbound_date <= (today + timedelta(days=15))]
 
-def check_for_search_updates(search: Search) -> tuple[list[TrainJourney], str, bool]:
+def check_for_search_updates(search: Search) -> tuple[str, list[TrainJourney], str, bool]:
     """Executes the search and checks if the results differ from the last run."""
     # create a minimal search object that only contains the data needed for constructing a search url
     ms = MinimalSearch(search.origin, search.destination, search.outbound_date, search.inbound_date)
@@ -40,4 +40,4 @@ def check_for_search_updates(search: Search) -> tuple[list[TrainJourney], str, b
     
     has_changed = (search.last_results != hashed_results)
     
-    return results, results_string, has_changed
+    return url, results, results_string, has_changed

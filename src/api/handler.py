@@ -84,9 +84,9 @@ def process_message(user_id, message):
                     # broadcast to all
                     users = get_subscribed_users(search.id)
                     for u in users:
-                        send_results_to_user(u.id, results)
+                        send_results_to_user(u.id, results, url)
                 else:
-                    send_results_to_user(user_id, results)
+                    send_results_to_user(user_id, results, url)
                 update_last_run(search.id, result_joined)
                 
         if existing_dates_message:

@@ -108,21 +108,22 @@ def notify_user(user_id, subject, body):
         if not success:
             logger.error(f"Failed to send email: {error}")
 
-def send_results_to_user(user_id, results: list[TrainJourney]):
+def send_results_to_user(user_id, results: list[TrainJourney], url: str = None):
     user = get_user_by_id(user_id)
     if not user:
         return
         
     trial = get_user_trial(user_id)
     
-    body = ""
-    for result in results:
-        body += str(result) + "\n"
+    # Build ONE combined body — fixes double-email bug where N results caused N emails
+    body = "\n".join(str(r) for r in results)
+    if url:
+        body += f"\n\n🔗 Book now: {url}"
 
-    subject = "Eurostar Train Search Results"
+    subject = "🚨 Eurostar Snap Ticket Found!"
     
     if user.is_paying:
-        notify_user(user_id, subject, f"⚡ Priority Alert:\n\n{body}\n💸 You've saved £120+ already!")
+        notify_user(user_id, subject, f"⚡ Priority Alert:\n\n{body}\n\n💸 You've saved £120+ already!")
     elif trial and trial.alerts_used < trial.alerts_limit:
         increment_user_trial(user_id)
         notify_user(user_id, subject, f"🆓 Free Alert ({trial.alerts_used + 1}/{trial.alerts_limit} used):\n\n{body}")
