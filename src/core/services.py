@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from src.core.models import Search
 
 MAX_SEARCH_DAYS = 14
-SEARCH_INTERVAL = timedelta(minutes=10)
+SEARCH_INTERVAL = timedelta(minutes=15)
 
 def is_date_trackable(target_date):
     if not target_date:
