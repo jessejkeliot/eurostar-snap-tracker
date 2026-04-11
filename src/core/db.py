@@ -11,8 +11,6 @@ from src.core.utility import hash_for_db
 
 load_dotenv()
 
-SEARCH_INTERVAL = 800  # seconds, i.e. 15 minutes
-
 DB_PARAMS = {
     "host": os.getenv("DB_HOST"),
     "port": int(os.getenv("DB_PORT", 5432)),
@@ -161,7 +159,7 @@ def get_search_by_id(search_id):
 
     return Search(*row)
 
-def get_searches_due():
+def get_searches_due(search_interval: float):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
@@ -169,7 +167,7 @@ def get_searches_due():
                    FROM searches
                    WHERE last_checked IS NULL
                    OR last_checked <= NOW() - (%s * INTERVAL '1 second')
-                   """, (SEARCH_INTERVAL,))
+                   """, (search_interval,))
     
     rows = cursor.fetchall()
     
