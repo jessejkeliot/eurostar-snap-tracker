@@ -137,6 +137,7 @@ def email_handler():
         data = bottle.request.json
         email_address = data.get("from")
         message = data.get("body")
+        logger.info(f"📧 Received email webhook from {email_address}. Processing...")
         
         user = get_user_by_email(email_address)
         if user:
@@ -145,6 +146,7 @@ def email_handler():
             user_id = create_user_from_email(email_address)
             
         process_message(user_id, message)
+        logger.info(f"✅ Webhook processing complete for {email_address}")
         return {"status": "OK"}
     except Exception as e:
         return {"error": str(e)}

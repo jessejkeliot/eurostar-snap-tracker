@@ -162,6 +162,7 @@ def send_onboarded_message_to_user(user_id):
     notify_user(user_id, "Welcome to Eurostar Bot", body)
 
 def parse_message(message):
+    logger.info("🧠 Sending message to Gemma for parsing...")
     # make gemma 4 call with our system prompt
     client = genai.Client(api_key=os.getenv("GEMINI_KEY"))
     schema = MinimalSearchModel.model_json_schema()
