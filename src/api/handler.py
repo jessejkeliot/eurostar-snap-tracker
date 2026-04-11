@@ -234,4 +234,12 @@ def send_email():
 app = bottle.default_app()
 
 if __name__ == "__main__":
-    bottle.run(app=app, host='localhost', port=8080, debug=True) # fallback for basic local execution
+    # Startup Diagnostic
+    print("🚀 Starting Eurostar Snap Tracker API...")
+    if not os.getenv("GEMINI_KEY"):
+        print("🛑 ERROR: GEMINI_KEY not found in environment!")
+    else:
+        print("✅ GEMINI_KEY detected.")
+    
+    print("📡 Listening on http://0.0.0.0:8080...")
+    bottle.run(app=app, host='0.0.0.0', port=8080, debug=True)

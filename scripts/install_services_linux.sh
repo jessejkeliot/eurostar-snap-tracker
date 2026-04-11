@@ -45,7 +45,7 @@ After=network.target
 User=$APP_USER
 WorkingDirectory=$PROJECT_DIR
 Environment="PYTHONPATH=$PROJECT_DIR"
-ExecStart=$GUNICORN_PATH -w 2 -b 0.0.0.0:8080 src.api.handler:app
+ExecStart=$PYTHON_PATH -u src/api/handler.py
 Restart=always
 RestartSec=5
 
