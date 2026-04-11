@@ -17,6 +17,7 @@ def process_message(user_id, message):
     strikes = get_abuse_strikes(user_id)
     if strikes >= 3:
         # User has repeatedly forced failures. Ignore silently to conserve LLM/WhatsApp API quota.
+        delete_all_subscriptions_for_user(user_id)
         return "IGNORED_ABUSE"
 
     msg_lower = message.strip().lower()
@@ -31,27 +32,59 @@ def process_message(user_id, message):
         send_retry_message_to_user(user_id)
         return "BAD"
     
-    params = parse_message(message) # use gemma
-    if (params):
+    params_list = parse_message(message) # use gemma
+    if params_list:
         reset_abuse_strikes(user_id)
-        search_id, is_new = add_subscription(user_id, params.origin, params.destination, params.outbound_date, params.inbound_date)
-        search = get_search_by_id(search_id)
+        user = get_user_by_id(user_id)
+        
+        if len(params_list) > 1:
+            if not user.is_paying:
+                msg = (
+                    "🗓️ Multi-day tracking is a Premium feature!\n\n"
+                    "Upgrade for:\n"
+                    "⚡ Instant alerts\n"
+                    "🔁 Unlimited deals\n"
+                    "🗓️ Multi-day tracking ranges\n\n"
+                    "👉 £2.49/month\n"
+                    f"https://buy.stripe.com/test_checkout_link?client_reference_id={user_id}"
+                )
+                send_message_to_user(user_id, "Premium Feature", msg)
+                return "PAYWALL"
+            if len(params_list) > 7:
+                send_message_to_user(user_id, "Range Too Large", "Max search range is 7 days. Please try a shorter duration.")
+                return "BAD"
+        
+        existing_dates_message = False
+        
+        for params in params_list:
+            search_id, is_new = add_subscription(user_id, params.origin, params.destination, params.outbound_date, params.inbound_date)
+            search = get_search_by_id(search_id)
 
-        if search and (is_new or should_run_now(search)):
-            ms = MinimalSearch(search.origin, search.destination, search.outbound_date, search.inbound_date)
-            url, results = run_search(ms)
-            result_joined = " ".join([str(tj) for tj in results])
-            hd = hash_for_db(result_joined)
-            if(not is_new and search.last_results != hd):
-                # broadcast to all
-                users = get_subscribed_users(search.id)
-                for user in users:
-                    send_results_to_user(user.id, results)
+            if not is_new:
+                existing_dates_message = True
+
+            if search and (is_new or should_run_now(search)):
+                ms = MinimalSearch(search.origin, search.destination, search.outbound_date, search.inbound_date)
+                url, results = run_search(ms)
+                result_joined = " ".join([str(tj) for tj in results])
+                hd = hash_for_db(result_joined)
+                if(not is_new and search.last_results != hd):
+                    # broadcast to all
+                    users = get_subscribed_users(search.id)
+                    for u in users:
+                        send_results_to_user(u.id, results)
+                else:
+                    send_results_to_user(user_id, results)
+                update_last_run(search.id, result_joined)
+                
+        if existing_dates_message:
+            if len(params_list) > 1:
+                earliest = min(p.outbound_date for p in params_list).strftime("%Y-%m-%d")
+                latest = max(p.outbound_date for p in params_list).strftime("%Y-%m-%d")
+                body = f"Welcome! You've been subscribed to train search notifications for the range {earliest} -> {latest}. You'll receive updates on your searches."
+                send_message_to_user(user_id, "Welcome to Eurostar Bot", body)
             else:
-                send_results_to_user(user_id, results)
-            update_last_run(search.id, result_joined)
-        if (not is_new):
-            send_onboarded_message_to_user(user_id)
+                send_onboarded_message_to_user(user_id)
         return "OK"
     else:
         # LLM parsing failed despite passing regex

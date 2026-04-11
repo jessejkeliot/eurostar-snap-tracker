@@ -35,6 +35,7 @@ class MinimalSearchModel(BaseModel): # with the names for origin and destination
     origin: str = Field(description="Origin station name")
     destination: str = Field(description="Destination station name")
     outbound_date: date = Field(description="Outbound travel date")
+    end_date: Optional[date] = Field(default=None, description="End date if a range is requested")
     inbound_date: Optional[date] = Field(default=None, description="Optional inbound travel date")
 
 @dataclass

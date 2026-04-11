@@ -97,14 +97,15 @@ def send_results_to_user(user_id, results: list[TrainJourney]):
             "🚨 Snap ticket found:\n\n"
             f"{body}\n"
             "You’ve used your free alerts 👀\n"
-            "You’re seeing this 5 minutes later than premium users ⏱️\n\n"
+            "You’re seeing this 10 minutes later than premium users ⏱️\n\n"
             "Upgrade for:\n"
             "⚡ Instant alerts\n"
-            "🔁 Unlimited deals\n\n"
+            "🔁 Unlimited deals\n"
+            "🗓️ Multi-day tracking ranges\n\n"
             "👉 £2.49/month\n"
             f"https://buy.stripe.com/test_checkout_link?client_reference_id={user_id}"
         )
-        t = threading.Timer(300.0, notify_user, args=[user_id, "Delayed Eurostar Search", paywall_msg])
+        t = threading.Timer(600.0, notify_user, args=[user_id, "Delayed Eurostar Search", paywall_msg])
         t.start()
         logger.info(f"Scheduled delayed alert for user {user.phone_number or user.email}")
 
@@ -140,7 +141,20 @@ def parse_message(message):
         dest_id = get_station_id(search.destination)
         if not origin_id or not dest_id:
              return None
-        return MinimalSearch(origin=origin_id, destination=dest_id, outbound_date=search.outbound_date, inbound_date=search.inbound_date)
+             
+        searches = []
+        if search.end_date:
+            from datetime import timedelta
+            delta = (search.end_date - search.outbound_date).days
+            if delta < 0:
+                return None
+            for i in range(delta + 1):
+                current_date = search.outbound_date + timedelta(days=i)
+                searches.append(MinimalSearch(origin=origin_id, destination=dest_id, outbound_date=current_date, inbound_date=search.inbound_date))
+        else:
+            searches.append(MinimalSearch(origin=origin_id, destination=dest_id, outbound_date=search.outbound_date, inbound_date=search.inbound_date))
+            
+        return searches
     return None
 
 def list_models():

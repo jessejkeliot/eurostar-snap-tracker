@@ -96,6 +96,7 @@ You’ve used your free alerts 👀
 Upgrade for:
 ⚡ Instant alerts
 🔁 Unlimited deals
+🗓️ Multi-day tracking ranges
 
 👉 £4.99/month
 [Subscribe link]
@@ -106,7 +107,7 @@ Upgrade for:
 ## 7. Delay Mechanic
 
 ```
-You’re seeing this 5 minutes later than premium users ⏱️
+You’re seeing this 10 minutes later than premium users ⏱️
 ```
 
 ---

@@ -114,7 +114,7 @@ Based on the state, we adjust the delivery speed and messaging.
 **FREE_LIMITED STATE**  
 - 5-minute delayed delivery.
 - No hard block on alerts, but degraded experience.
-- Appended Delay Mechanic Text: *"You’re seeing this 5 minutes later than premium users ⏱️"*
+- Appended Delay Mechanic Text: *"You’re seeing this 10 minutes later than premium users ⏱️"*
 
 ## 3. Stripe Payment Flow & Soft Paywalls
 
@@ -130,7 +130,7 @@ When a user exhausts their free alerts (e.g. they receive their 4th alert), we p
 London → Paris £42 (normally £115)
 
 You’ve used your free alerts 👀
-You’re seeing this 5 minutes later than premium users ⏱️
+You’re seeing this 10 minutes later than premium users ⏱️
 
 Upgrade for:
 ⚡ Instant alerts
