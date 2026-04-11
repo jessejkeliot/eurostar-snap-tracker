@@ -14,6 +14,7 @@ from src.core.log_config import get_logger
 
 logger = get_logger(__name__)
 from src.core.db import get_user_by_id, get_user_trial, increment_user_trial
+from src.core.mailer import send_gmail_message
 
 load_dotenv()
 import argparse
@@ -103,17 +104,9 @@ def notify_user(user_id, subject, body):
         send_whatsapp_message(user.phone_number, body)
     elif user.email:
         html_body = generate_html_email(subject, body)
-        data = {
-            "to": user.email,
-            "subject": subject,
-            "body": body,
-            "html_body": html_body
-        }
-        try:
-            response = requests.post("http://localhost:8080/send-email", json=data)
-            response.raise_for_status()
-        except requests.RequestException as e:
-            logger.error(f"Failed to send email: {e}")
+        success, error = send_gmail_message(user.email, subject, body, html_body)
+        if not success:
+            logger.error(f"Failed to send email: {error}")
 
 def send_results_to_user(user_id, results: list[TrainJourney]):
     user = get_user_by_id(user_id)

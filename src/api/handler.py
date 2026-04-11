@@ -5,10 +5,8 @@ from src.core.services import add_subscription, should_run_now
 from src.core.db import create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user, get_abuse_strikes, increment_abuse_strikes, reset_abuse_strikes
 from src.scraper.tracker import run_search
 from src.bot.messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user, send_message_to_user
+from src.core.mailer import send_gmail_message
 import bottle
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import os
 import stripe
 from datetime import timedelta, datetime
@@ -212,24 +210,12 @@ def send_email():
     if not gmail_address or not gmail_password:
         return {"error": "Gmail credentials not configured"}
     
-    msg = MIMEMultipart('alternative')
-    msg['From'] = gmail_address
-    msg['To'] = to_email
-    msg['Subject'] = subject
+    success, error = send_gmail_message(to_email, subject, body, html_body)
     
-    msg.attach(MIMEText(body, 'plain'))
-    if html_body:
-        msg.attach(MIMEText(html_body, 'html'))
-    
-    try:
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login(gmail_address, gmail_password)
-        text = msg.as_string()
-        server.sendmail(gmail_address, to_email, text)
-        server.quit()
+    if success:
         return {"status": "Email sent successfully"}
-    except Exception as e:
-        return {"error": str(e)}
+    else:
+        return {"error": error}
 
 app = bottle.default_app()
 
