@@ -2,7 +2,7 @@ import psycopg2
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-from models import User, Search, Subscription
+from models import User, Search, Subscription, Trial
 from datetime import datetime
 import argparse
 
@@ -86,6 +86,7 @@ def create_user_from_email(email):
         (email,)
     )
     row = cursor.fetchone()
+    cursor.execute("INSERT INTO trials (user_id) VALUES (%s)", (row[0],))
     conn.commit()
     cursor.close()
     conn.close()
@@ -103,6 +104,7 @@ def create_user_from_phone(phone_number):
         (phone_number,)
     )
     row = cursor.fetchone()
+    cursor.execute("INSERT INTO trials (user_id) VALUES (%s)", (row[0],))
     conn.commit()
     cursor.close()
     conn.close()
@@ -259,6 +261,26 @@ def get_user_by_id(user_id):
     
     return User(*row)
 
+def set_user_paid(user_id, expires_date=None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+                   UPDATE users
+                   SET is_paying = TRUE, subscription_expires = %s
+                   WHERE id = %s
+                   """, (expires_date, user_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+def delete_all_subscriptions_for_user(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM subscriptions WHERE user_id = %s", (user_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+
 def update_last_run(search_id, result_joined):
     # This updates the last_checked time for a search and the last results
     conn = get_connection()
@@ -274,6 +296,38 @@ def update_last_run(search_id, result_joined):
     conn.commit()
     cursor.close()
     conn.close()
+
+def get_user_trial(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+                   SELECT user_id, alerts_used, alerts_limit, started_at
+                   FROM trials
+                   WHERE user_id=%s
+                   """, (user_id,))
+    row = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    if not row:
+        return None
+    return Trial(*row)
+
+def increment_user_trial(user_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+                   UPDATE trials
+                   SET alerts_used = alerts_used + 1
+                   WHERE user_id = %s
+                   RETURNING user_id, alerts_used, alerts_limit, started_at
+                   """, (user_id,))
+    row = cursor.fetchone()
+    conn.commit()
+    cursor.close()
+    conn.close()
+    if not row:
+        return None
+    return Trial(*row)
 
 def update_last_checked(search_id):
     # this only updates the last checked time

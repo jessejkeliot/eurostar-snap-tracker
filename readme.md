@@ -28,12 +28,35 @@ If first time running run
 ``` python3 init_db.py ```
 
 Then in three separate terminal tabs or windows:
-1. Start up the bottle API endpoint in **handler.py** by running:
-``` python3 handler.py ```
+1. Start up the bottle API endpoint in **handler.py** using gunicorn by running:
+``` gunicorn -w 2 -b 0.0.0.0:8080 handler:app ```
 2. Start up the faux-cron python script in **pycron.py** by running:
 ``` python3 pycron.py ```
 3. Start up the email poller in **email_poller.py** by running:
 ``` python3 email_poller.py ```
+
+### How to Run on Linux (Google Cloud e2-micro / Ubuntu)
+
+For production environments, you should run the services via `systemd` so they automatically restart if the machine reboots or the processes crash. We've included a script to do this automatically.
+
+Once you have cloned the project on your server and activated the virtual environment:
+1. Run the deployment script with sudo:
+``` sudo bash install_services_linux.sh ```
+2. The script will dynamically generate `.service` wrappers and boot Gunicorn + Pycron + the Email Poller instantly into the background.
+
+To check up on the running logs, you can use built-in journalctl commands:
+- `sudo journalctl -u whatsnap-api -f`
+- `sudo journalctl -u whatsnap-cron -f`
+- `sudo journalctl -u whatsnap-poller -f`
+
+**Managing the Services:**
+- Stop all services: `sudo systemctl stop whatsnap-api whatsnap-cron whatsnap-poller`
+- Restart (e.g. after pulling code updates): `sudo systemctl restart whatsnap-api whatsnap-cron whatsnap-poller`
+- Disable them completely: `sudo systemctl disable whatsnap-api whatsnap-cron whatsnap-poller`
+
+**Viewing the Application Logs:**
+All python microservices are hooked up to a centralized logging system. You can view errors, Gemma outputs, and WhatsApp hook metrics by running:
+``` tail -f bot.log ```
 
 ### Adding Users, Searches and Subscriptions Manually
 

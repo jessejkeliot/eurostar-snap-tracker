@@ -106,7 +106,7 @@ Upgrade for:
 ## 7. Delay Mechanic
 
 ```
-You’re seeing this 12 minutes later than premium users ⏱️
+You’re seeing this 5 minutes later than premium users ⏱️
 ```
 
 ---
@@ -114,8 +114,8 @@ You’re seeing this 12 minutes later than premium users ⏱️
 ## 8. Payment Flow
 
 - Stripe checkout link
-- £4.99/month
-- £39/year
+- £2.49/month
+- £24.99/year
 
 ---
 

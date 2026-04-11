@@ -3,6 +3,9 @@ from models import MinimalSearch, Search
 from tracker import TrainJourney, run_search
 from messaging import send_results_to_user
 from datetime import datetime, timedelta
+from log_config import get_logger
+
+logger = get_logger(__name__)
 def handler():
     active_searches = get_active_searches()
     
@@ -17,7 +20,7 @@ def handler():
             update_last_run(search.id, results_string)
         else:
             update_last_checked(search.id)
-            print(f"On latest run of search (id: {search.id}) the results have not changed")
+            logger.info(f"On latest run of search (id: {search.id}) the results have not changed")
 
 def get_active_searches() -> list[Search]:
     """Retrieves searches that are due and within the 15-day active window."""

@@ -32,3 +32,12 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     FOREIGN KEY (search_id) REFERENCES searches(id) ON DELETE CASCADE,
     UNIQUE(user_id, search_id)
 );
+
+-- Trials table
+CREATE TABLE IF NOT EXISTS trials (
+    user_id INTEGER PRIMARY KEY,
+    alerts_used INTEGER DEFAULT 0,
+    alerts_limit INTEGER DEFAULT 3,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

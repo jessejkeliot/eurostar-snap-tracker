@@ -1,17 +1,25 @@
+from db import get_subscribed_users
 from models import MinimalSearch
 from myparse import about_trains
-from scheduler import search_and_send, send_to_subscribed_users
 from services import add_subscription, should_run_now
-from db import create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run
+from db import create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user
 from tracker import run_search
-from messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user
+from messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user, send_message_to_user
 import bottle
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import os
+import stripe
+from datetime import timedelta, datetime
 
 def process_message(user_id, message):
+    msg_lower = message.strip().lower()
+    if msg_lower in ["stop", "unsubscribe", "cancel", "quit", "halt", "end", "remove"]:
+        delete_all_subscriptions_for_user(user_id)
+        send_message_to_user(user_id, "Unsubscribed", "You have been safely unsubscribed from all train alerts. 🛑\n\nSend a new route whenever you want to track fares again!")
+        return "UNSUBSCRIBED"
+        
     train_message = about_trains(message)
     if(not train_message):
         send_retry_message_to_user(user_id)
@@ -28,7 +36,9 @@ def process_message(user_id, message):
             hd = hash_for_db(result_joined)
             if(not is_new and search.last_results != hd):
                 # broadcast to all
-                send_to_subscribed_users(search.id, results)
+                users = get_subscribed_users(search.id)
+                for user in users:
+                    send_results_to_user(user.id, results)
             else:
                 send_results_to_user(user_id, results)
             update_last_run(search.id, result_joined)
@@ -96,6 +106,45 @@ def email_handler():
     except Exception as e:
         return {"error": str(e)}
 
+@bottle.route("/webhook/stripe", method="POST")
+def stripe_webhook():
+    payload = bottle.request.body.read()
+    sig_header = bottle.request.headers.get("Stripe-Signature")
+    endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+    
+    event = None
+    try:
+        if endpoint_secret and sig_header:
+            event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        else:
+            # Fallback for local testing without verification
+            import json
+            event = json.loads(payload)
+    except Exception as e:
+        bottle.response.status = 400
+        return str(e)
+        
+    if event["type"] == "checkout.session.completed":
+        session = event["data"]["object"]
+        user_id = session.get("client_reference_id")
+        
+        if user_id:
+            # Assuming monthly sub for simplicity:
+            expires = datetime.now().date() + timedelta(days=30)
+            set_user_paid(user_id, expires)
+            
+            from messaging import notify_user
+            msg = (
+                "✅ You’re now on premium\n\n"
+                "You’ll get:\n"
+                "⚡ Instant alerts\n"
+                "🎯 Priority deals\n\n"
+                "Next deal could drop anytime 👀"
+            )
+            notify_user(user_id, "Welcome to Premium!", msg)
+            
+    return "OK"
+
 @bottle.route("/send-email", method="POST")
 def send_email():
     try:
@@ -133,5 +182,7 @@ def send_email():
     except Exception as e:
         return {"error": str(e)}
 
+app = bottle.default_app()
+
 if __name__ == "__main__":
-    bottle.run(host='localhost', port=8080, debug=True) # just for dev, should use gunicorn
+    bottle.run(app=app, host='localhost', port=8080, debug=True) # fallback for basic local execution

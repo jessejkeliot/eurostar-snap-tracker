@@ -7,7 +7,12 @@ from datetime import datetime
 from dotenv import load_dotenv
 from tracker import TrainJourney
 import requests
-from db import get_user_by_id
+import threading
+from myparse import get_station_id
+from log_config import get_logger
+
+logger = get_logger(__name__)
+from db import get_user_by_id, get_user_trial, increment_user_trial
 
 load_dotenv()
 import argparse
@@ -25,7 +30,7 @@ def send_whatsapp_message(phone_number, text):
     token = os.getenv("WHATSAPP_TOKEN")
     phone_id = os.getenv("WHATSAPP_PHONE_ID")
     if not token or not phone_id:
-        print("WhatsApp credentials not configured")
+        logger.error("WhatsApp credentials not configured")
         return
         
     url = f"https://graph.facebook.com/v17.0/{phone_id}/messages"
@@ -48,7 +53,7 @@ def send_whatsapp_message(phone_number, text):
         response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()
     except requests.RequestException as e:
-        print(f"Failed to send WhatsApp message: {e}")
+        logger.error(f"Failed to send WhatsApp message: {e}")
 
 def notify_user(user_id, subject, body):
     user = get_user_by_id(user_id)
@@ -67,16 +72,44 @@ def notify_user(user_id, subject, body):
             response = requests.post("http://localhost:8080/send-email", json=data)
             response.raise_for_status()
         except requests.RequestException as e:
-            print(f"Failed to send email: {e}")
+            logger.error(f"Failed to send email: {e}")
 
 def send_results_to_user(user_id, results: list[TrainJourney]):
-    body = "Your train search results:\n\n"
+    user = get_user_by_id(user_id)
+    if not user:
+        return
+        
+    trial = get_user_trial(user_id)
+    
+    body = ""
     for result in results:
         body += str(result) + "\n"
-    notify_user(user_id, "Eurostar Train Search Results", body)
+
+    subject = "Eurostar Train Search Results"
+    
+    if user.is_paying:
+        notify_user(user_id, subject, f"⚡ Priority Alert:\n\n{body}\n💸 You've saved £120+ already!")
+    elif trial and trial.alerts_used < trial.alerts_limit:
+        increment_user_trial(user_id)
+        notify_user(user_id, subject, f"🆓 Free Alert ({trial.alerts_used + 1}/{trial.alerts_limit} used):\n\n{body}")
+    else:
+        paywall_msg = (
+            "🚨 Snap ticket found:\n\n"
+            f"{body}\n"
+            "You’ve used your free alerts 👀\n"
+            "You’re seeing this 5 minutes later than premium users ⏱️\n\n"
+            "Upgrade for:\n"
+            "⚡ Instant alerts\n"
+            "🔁 Unlimited deals\n\n"
+            "👉 £2.49/month\n"
+            f"https://buy.stripe.com/test_checkout_link?client_reference_id={user_id}"
+        )
+        t = threading.Timer(300.0, notify_user, args=[user_id, "Delayed Eurostar Search", paywall_msg])
+        t.start()
+        logger.info(f"Scheduled delayed alert for user {user.phone_number or user.email}")
 
 def send_retry_message_to_user(user_id):
-    body = "Sorry, I didn't understand your message. Please try again with a train booking request."
+    body = "Sorry, I didn't understand your message. Please try again with a train booking request.\n\n(Tip: Reply 'STOP' at any time to cancel all active alerts)."
     notify_user(user_id, "Eurostar Bot - Message Not Understood", body)
 
 def send_message_to_user(user_id, subject, body):
@@ -101,10 +134,13 @@ def parse_message(message):
     ),
     )
     if response.text:
-        print(response.text)
+        logger.debug(f"LLM Response: {response.text}")
         search = MinimalSearchModel.model_validate_json(response.text)
-        print(search)
-        return MinimalSearch(**search.model_dump())
+        origin_id = get_station_id(search.origin)
+        dest_id = get_station_id(search.destination)
+        if not origin_id or not dest_id:
+             return None
+        return MinimalSearch(origin=origin_id, destination=dest_id, outbound_date=search.outbound_date, inbound_date=search.inbound_date)
     return None
 
 def list_models():

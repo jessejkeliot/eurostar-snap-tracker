@@ -3,6 +3,9 @@ import email
 import os
 import requests
 import time
+from log_config import get_logger
+
+logger = get_logger(__name__)
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -46,15 +49,17 @@ def poll_emails():
                         
                         # Send to bottle endpoint
                         if body and email_address:
-                            requests.post(BOTTLE_ENDPOINT, json={
+                            payload = {
                                 "from": email_address,
                                 "body": body
-                            })
-                            print(f"Forwarded email from {email_address} to webhook")
+                            }
+                            # Note: No auth header used for local service-to-service call
+                            requests.post("http://localhost:8080/webhook/email", json=payload)
+                            logger.info(f"Forwarded email from {email_address} to webhook")
         
         imap.logout()
     except Exception as e:
-        print(f"Error polling emails: {e}")
+        logger.error(f"Error polling emails: {e}")
 
 if __name__ == "__main__":
     while True:

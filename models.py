@@ -42,3 +42,10 @@ class Subscription:
     user_id: int
     search_id: int
     created_at: datetime
+
+@dataclass
+class Trial:
+    user_id: int
+    alerts_used: int
+    alerts_limit: int
+    started_at: datetime
