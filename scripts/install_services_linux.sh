@@ -19,13 +19,14 @@ fi
 
 USER_HOME=$(eval echo ~$APP_USER)
 
-# Fallback: check if the user is using a venv like suggested in the readme
-if [ -d "$USER_HOME/venv" ]; then
-    PYTHON_PATH="$USER_HOME/venv/bin/python3"
-    GUNICORN_PATH="$USER_HOME/venv/bin/gunicorn"
-else
-    PYTHON_PATH=$(which python3)
-    GUNICORN_PATH=$(which gunicorn)
+# Set paths to global python and gunicorn explicitly
+PYTHON_PATH=$(which python3)
+GUNICORN_PATH=$(which gunicorn)
+
+# Error check to prevent service failure
+if [ -z "$GUNICORN_PATH" ]; then
+    echo "🚨 Gunicorn not found in global path! Please run: sudo pip3 install gunicorn"
+    exit 1
 fi
 
 echo "⚙️  User: $APP_USER"
