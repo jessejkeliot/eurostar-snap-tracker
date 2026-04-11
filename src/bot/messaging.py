@@ -109,6 +109,11 @@ def notify_user(user_id, subject, body):
             logger.error(f"Failed to send email: {error}")
 
 def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, origin_name: str = None, dest_name: str = None):
+    # SILENCE IS GOLDEN: Do not send email if no results found
+    if not results:
+        print(f"DEBUG: ℹ️ No results for user {user_id}. Skipping email.")
+        return
+        
     user = get_user_by_id(user_id)
     if not user:
         return

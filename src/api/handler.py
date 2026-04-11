@@ -1,5 +1,5 @@
 from src.core.models import MinimalSearch
-from src.core.services import should_run_now, add_subscription
+from src.core.services import should_run_now, add_subscription, is_date_trackable, MAX_SEARCH_DAYS
 from src.bot.myparse import about_trains, get_station_name
 from src.core.db import get_user_by_id, get_subscribed_users, create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user, get_abuse_strikes, increment_abuse_strikes, reset_abuse_strikes
 from src.scraper.tracker import run_search
@@ -63,7 +63,13 @@ def process_message(user_id, message):
         
         existing_dates_message = False
         
+        rejected_dates = []
         for params in params_list:
+            if not is_date_trackable(params.outbound_date):
+                print(f"DEBUG: 🛑 Skipping date {params.outbound_date} (outside {MAX_SEARCH_DAYS} day limit)")
+                rejected_dates.append(str(params.outbound_date))
+                continue
+
             print(f"DEBUG: 📝 Subscribing user {user_id} to {params.outbound_date}")
             search_id, is_sub_new = add_subscription(user_id, params.origin, params.destination, params.outbound_date, params.inbound_date)
             search = get_search_by_id(search_id)
@@ -99,7 +105,11 @@ def process_message(user_id, message):
                     print(f"DEBUG: 🤐 Results unchanged and user {user_id} already subscribed. Staying silent.")
 
                 update_last_run(search.id, result_joined)
-                
+        
+        if rejected_dates:
+            rejected_str = ", ".join(rejected_dates)
+            send_message_to_user(user_id, "Search Range Limit", f"⚠️ Note: We only support tracking for dates within the next {MAX_SEARCH_DAYS} days. The following dates were skipped: {rejected_str}")
+
         if existing_dates_message:
             if len(params_list) > 1:
                 earliest = min(p.outbound_date for p in params_list).strftime("%Y-%m-%d")
