@@ -1,4 +1,4 @@
-from src.core.db import get_searches_due, get_active_searches, get_subscribed_users, hash_for_db, update_last_checked, update_last_run
+from src.core.db import get_searches_due, get_subscribed_users, hash_for_db, update_last_checked, update_last_run
 from src.core.models import MinimalSearch, Search
 from src.core.services import MAX_SEARCH_DAYS, SEARCH_INTERVAL
 from src.scraper.tracker import TrainJourney, run_search
