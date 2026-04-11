@@ -157,6 +157,9 @@ def email_handler():
         logger.info(f"✅ Webhook processing complete for {email_address}")
         return {"status": "OK"}
     except Exception as e:
+        import traceback
+        print(f"ERROR in email_handler: {e}")
+        print(traceback.format_exc())
         return {"error": str(e)}
 
 @bottle.route("/webhook/stripe", method="POST")
