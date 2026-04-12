@@ -12,7 +12,7 @@ def about_trains(message: str) -> bool:
     """
     # Create a pattern from key train words
     # Use a subset of train_words to avoid overly complex regex
-    key_words = ["eurostar", "train", "paris", "amsterdam", "london", "brussels", "rail", "booking", "ticket"]
+    key_words = ["eurostar", "train", "trains", "trein", "treinen", "paris", "amsterdam", "london", "brussels", "rail", "booking", "ticket"]
     key_words.extend(train_words)
     pattern = r'\b(' + '|'.join(key_words) + r')\b'
     

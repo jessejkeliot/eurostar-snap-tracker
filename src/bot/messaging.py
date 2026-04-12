@@ -153,7 +153,7 @@ def send_message_to_user(user_id, subject, body):
     notify_user(user_id, subject, body)
 
 def send_onboarded_message_to_user(user_id):
-    body = msg_templates.misunderstood_msg
+    body = msg_templates.onboard_msg
     notify_user(user_id, "Welcome to Eurostar Bot", body)
 
 def parse_message(message):
