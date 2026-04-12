@@ -64,10 +64,9 @@ def fetch(session, url, retries=3):
 
     return None
 
-def scrape(html, ret=False):
+def scrape(html):
     soup = BeautifulSoup(html, "html.parser")
     
-
     # search for all the input radios with the magic class. Then just get the parent.
     # then inside the parent search for the magic div / just search for the text "leaving between"
     # once we have the magic div do some processing to put it into a nice struct
@@ -81,14 +80,6 @@ def scrape(html, ret=False):
             if(parent):
                 div = parent.find("div", {"class": MAGIC_DIV_CLASS})
                 options.append(parse_departure(div))
-                
-        if ret and len(direction_sections) > 1:
-            train_input_elements = direction_sections[1].find_all("input", {"class": MAGIC_INPUT_CLASS}) # inbound
-            for magic_input in train_input_elements: 
-                parent = magic_input.parent
-                if(parent):
-                    div = parent.find("div", {"class": MAGIC_DIV_CLASS})
-                    options.append(parse_departure(div, outbound=False))
         return options
     else:
         return []
@@ -149,9 +140,8 @@ def main(url = URL):
     session = create_session()
     
     html = fetch(session, url)
-    returning = url.find("inbound") != -1
     if html:
-        journeys = scrape(html, returning)
+        journeys = scrape(html)
         print(url)
         if(len(journeys) == 0):
             print("No journeys found")
@@ -175,11 +165,11 @@ def main(url = URL):
         sleep_time = 900 + random.randint(-300, 300)
         time.sleep(max(60, sleep_time))  # never less than 1 min
 
-def run_search_from_params(origin, destination, outbound_date, inbound_date):
+def run_search_from_params(origin, destination, outbound_date):
     """
     Convenience wrapper (useful for CLI or testing)
     """
-    search = MinimalSearch(origin=origin, destination=destination, outbound_date=outbound_date, inbound_date=inbound_date)
+    search = MinimalSearch(origin=origin, destination=destination, outbound_date=outbound_date)
 
     return run_search(search)
 
@@ -190,8 +180,7 @@ def run_search(search: MinimalSearch):
     url = build_search_url(
         search.origin, # at this point is not actually an int but whatever
         search.destination, # nor here
-        search.outbound_date,
-        search.inbound_date,
+        search.outbound_date
     )
 
     results = main(url=url)
@@ -205,9 +194,8 @@ if __name__ == "__main__":
     parser.add_argument("--origin", required=True, help="Origin Name (e.g. 'London St Pancras')")
     parser.add_argument("--destination", required=True, help="Destination Name (e.g. 'Paris Gare du Nord')")
     parser.add_argument("--outbound-date", required=True, help="Outbound date (YYYY-MM-DD)")
-    parser.add_argument("--inbound-date", required=False, help="Inbound date (YYYY-MM-DD)")
 
     args = parser.parse_args()
 
-    run_search_from_params(args.origin, args.destination, args.outbound_date, args.inbound_date)
+    run_search_from_params(args.origin, args.destination, args.outbound_date)
     
