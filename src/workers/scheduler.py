@@ -1,6 +1,8 @@
 from src.core.db import get_searches_due, get_subscribed_users, hash_for_db, update_last_checked, update_last_run
 from src.core.models import MinimalSearch, Search
-from src.core.services import MAX_SEARCH_DAYS, SEARCH_INTERVAL
+from src.core.services import MAX_SEARCH_DAYS, SEARCH_INTERVAL, get_jittered_search_interval
+import time
+import random
 from src.scraper.tracker import TrainJourney, run_search
 from src.bot.messaging import send_results_to_user
 from src.bot.myparse import build_search_url, get_station_name
@@ -34,10 +36,16 @@ def handler():
         else:
             update_last_checked(search.id)
             logger.info(f"On latest run of search (id: {search.id}) the results have not changed")
+        
+        # Add random jitter between searches (2-5 seconds) to avoid firewall detection
+        sleep_duration = random.uniform(2, 5)
+        logger.info(f"Sleeping for {sleep_duration:.2f}s before next search...")
+        time.sleep(sleep_duration)
 
 def get_active_searches() -> list[Search]:
-    # This now just returns all searches; the handler filters them by the 14-day limit
-    return get_searches_due(SEARCH_INTERVAL.total_seconds())
+    # Use jittered interval for database lookup
+    interval_seconds = get_jittered_search_interval().total_seconds()
+    return get_searches_due(interval_seconds)
 
 def check_for_search_updates(search: Search) -> tuple[str, list[TrainJourney], str, bool]:
     """Executes the search and checks if the results differ from the last run."""

@@ -19,6 +19,7 @@ def process_message(user_id, message):
     strikes = get_abuse_strikes(user_id)
     if strikes >= 3:
         print(f"DEBUG: 🚫 User {user_id} blocked due to abuse strikes ({strikes})")
+        # Actually should have a blocked users table so anything else they send isn't responded to
         delete_all_subscriptions_for_user(user_id)
         return "IGNORED_ABUSE"
 
