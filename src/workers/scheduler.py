@@ -18,6 +18,10 @@ def handler():
     for search in trackable_searches:
         url, results, results_string, has_changed = check_for_search_updates(search)
         
+        if results is None:
+            logger.warning(f"⚠️ Background scrape failed for search {search.id}. Skipping this cycle.")
+            continue
+
         if has_changed:
             origin_name = get_station_name(search.origin)
             dest_name = get_station_name(search.destination)

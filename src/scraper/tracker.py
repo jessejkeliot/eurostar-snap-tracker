@@ -162,8 +162,7 @@ def main(url = URL):
     else:
         print("Failed to fetch page")
     print("\n")
-    emptyList : list[TrainJourney] = []
-    return emptyList
+    return []
     while False:
         html = fetch(session, URL)
 
@@ -196,6 +195,8 @@ def run_search(search: MinimalSearch):
     )
 
     results = main(url=url)
+    if results is None:
+        results = []
 
     return (url,results,)
 

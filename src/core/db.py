@@ -52,61 +52,63 @@ def init_postgres_db(db_params=DB_PARAMS, schema_file=SCHEMA_FILE):
 
 def get_existing_search(origin, destination, outbound_date, inbound_date):
     conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute(
-        """
-        SELECT id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
-        FROM searches
-        WHERE origin = %s
-          AND destination = %s
-          AND outbound_date = %s
-          AND inbound_date IS NOT DISTINCT FROM %s
-        """,
-        (origin, destination, outbound_date, inbound_date),
-    )
-    row = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    if row:
-        return Search(*row)
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
+                FROM searches
+                WHERE origin = %s
+                  AND destination = %s
+                  AND outbound_date = %s
+                  AND inbound_date IS NOT DISTINCT FROM %s
+                """,
+                (origin, destination, outbound_date, inbound_date),
+            )
+            row = cursor.fetchone()
+            if row:
+                return Search(*row)
+    finally:
+        conn.close()
     return None
 
 def create_user_from_email(email):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO users (email)
-        VALUES (%s)
-        RETURNING id
-        """,
-        (email,)
-    )
-    row = cursor.fetchone()
-    cursor.execute("INSERT INTO trials (user_id) VALUES (%s)", (row[0],))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return row[0]
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO users (email)
+                VALUES (%s)
+                RETURNING id
+                """,
+                (email,)
+            )
+            row = cursor.fetchone()
+            cursor.execute("INSERT INTO trials (user_id) VALUES (%s)", (row[0],))
+            conn.commit()
+            return row[0]
+    finally:
+        conn.close()
 
 def create_user_from_phone(phone_number):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO users (phone_number)
-        VALUES (%s)
-        RETURNING id
-        """,
-        (phone_number,)
-    )
-    row = cursor.fetchone()
-    cursor.execute("INSERT INTO trials (user_id) VALUES (%s)", (row[0],))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return row[0]
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO users (phone_number)
+                VALUES (%s)
+                RETURNING id
+                """,
+                (phone_number,)
+            )
+            row = cursor.fetchone()
+            cursor.execute("INSERT INTO trials (user_id) VALUES (%s)", (row[0],))
+            conn.commit()
+            return row[0]
+    finally:
+        conn.close()
 
 def create_search(origin, destination, outbound_date, inbound_date):
     # INSERT INTO searches ...
@@ -127,20 +129,20 @@ def create_search(origin, destination, outbound_date, inbound_date):
     return Search(*row)
 
 def create_subscription(user_id, search_id):
-    # INSERT INTO subscriptions ...
-    conn =  get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-                   INSERT INTO subscriptions (user_id, search_id, created_at)
-                   VALUES (%s, %s, NOW())
-                   ON CONFLICT (user_id, search_id) DO NOTHING
-                   RETURNING user_id, search_id, created_at
-                   """, (user_id, search_id))
-    row = cursor.fetchone()
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return row is not None
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                           INSERT INTO subscriptions (user_id, search_id, created_at)
+                           VALUES (%s, %s, NOW())
+                           ON CONFLICT (user_id, search_id) DO NOTHING
+                           RETURNING user_id, search_id, created_at
+                           """, (user_id, search_id))
+            row = cursor.fetchone()
+            conn.commit()
+            return row is not None
+    finally:
+        conn.close()
 
 def get_search_by_id(search_id):
     conn =  get_connection()
@@ -161,221 +163,201 @@ def get_search_by_id(search_id):
 
 def get_searches_due(search_interval: float):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-                   SELECT id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
-                   FROM searches
-                   WHERE last_checked IS NULL
-                   OR last_checked <= NOW() - (%s * INTERVAL '1 second')
-                   """, (search_interval,))
-    
-    rows = cursor.fetchall()
-    
-    cursor.close()
-    conn.close()
-
-    searches = [Search(*row) for row in rows]
-
-    return searches
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                           SELECT id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
+                           FROM searches
+                           WHERE last_checked IS NULL
+                           OR last_checked <= NOW() - (%s * INTERVAL '1 second')
+                           """, (search_interval,))
+            rows = cursor.fetchall()
+            return [Search(*row) for row in rows]
+    finally:
+        conn.close()
 
 def get_subscribed_users(search_id):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-                   SELECT u.id, u.phone_number, u.email, u.is_paying, u.subscription_expires, u.created_at
-                   FROM users as u
-                   WHERE EXISTS (
-                    SELECT 1
-                    FROM subscriptions AS s
-                    WHERE s.user_id = u.id
-                    AND s.search_id = %s)
-                   """, (search_id,))
-    
-    rows = cursor.fetchall()
-    
-    cursor.close()
-    conn.close()
-
-    users = [User(*row) for row in rows]
-
-    return users
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                           SELECT u.id, u.phone_number, u.email, u.is_paying, u.subscription_expires, u.created_at
+                           FROM users as u
+                           WHERE EXISTS (
+                            SELECT 1
+                            FROM subscriptions AS s
+                            WHERE s.user_id = u.id
+                            AND s.search_id = %s)
+                           """, (search_id,))
+            rows = cursor.fetchall()
+            return [User(*row) for row in rows]
+    finally:
+        conn.close()
 
 def get_user_by_phone_number(phone_number):
     conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-                   SELECT id, phone_number, email, is_paying, subscription_expires, created_at
-                   FROM users
-                   WHERE phone_number=%s
-                   """, (phone_number,))
-    
-    row = cursor.fetchone()
-    
-    cursor.close()
-    conn.close()
-    if not row:
-        return None
-    
-    return User(*row)
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                           SELECT id, phone_number, email, is_paying, subscription_expires, created_at
+                           FROM users
+                           WHERE phone_number=%s
+                           """, (phone_number,))
+            row = cursor.fetchone()
+            return User(*row) if row else None
+    finally:
+        conn.close()
 
 def get_user_by_email(email):
     conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-                   SELECT id, phone_number, email, is_paying, subscription_expires, created_at
-                   FROM users
-                   WHERE email=%s
-                   """, (email,))
-    
-    row = cursor.fetchone()
-    
-    cursor.close()
-    conn.close()
-    if not row:
-        return None
-    
-    return User(*row)
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                           SELECT id, phone_number, email, is_paying, subscription_expires, created_at
+                           FROM users
+                           WHERE email=%s
+                           """, (email,))
+            row = cursor.fetchone()
+            return User(*row) if row else None
+    finally:
+        conn.close()
 
 def get_user_by_id(user_id):
     conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-                   SELECT id, phone_number, email, is_paying, subscription_expires, created_at
-                   FROM users
-                   WHERE id=%s
-                   """, (user_id,))
-    
-    row = cursor.fetchone()
-    
-    cursor.close()
-    conn.close()
-    if not row:
-        return None
-    
-    return User(*row)
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                           SELECT id, phone_number, email, is_paying, subscription_expires, created_at
+                           FROM users
+                           WHERE id=%s
+                           """, (user_id,))
+            row = cursor.fetchone()
+            return User(*row) if row else None
+    finally:
+        conn.close()
 
 def get_abuse_strikes(user_id):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT abuse_strikes FROM users WHERE id = %s", (user_id,))
-    row = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    return row[0] if row else 0
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT abuse_strikes FROM users WHERE id = %s", (user_id,))
+            row = cursor.fetchone()
+            return row[0] if row else 0
+    finally:
+        conn.close()
 
 def increment_abuse_strikes(user_id):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET abuse_strikes = abuse_strikes + 1 WHERE id = %s", (user_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE users SET abuse_strikes = abuse_strikes + 1 WHERE id = %s", (user_id,))
+            conn.commit()
+    finally:
+        conn.close()
 
 def reset_abuse_strikes(user_id):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET abuse_strikes = 0 WHERE id = %s", (user_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("UPDATE users SET abuse_strikes = 0 WHERE id = %s", (user_id,))
+            conn.commit()
+    finally:
+        conn.close()
 
 def set_user_paid(user_id, expires_date=None):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-                   UPDATE users
-                   SET is_paying = TRUE, subscription_expires = %s
-                   WHERE id = %s
-                   """, (expires_date, user_id))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                           UPDATE users
+                           SET is_paying = TRUE, subscription_expires = %s
+                           WHERE id = %s
+                           """, (expires_date, user_id))
+            conn.commit()
+    finally:
+        conn.close()
 
 def delete_all_subscriptions_for_user(user_id):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM subscriptions WHERE user_id = %s", (user_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM subscriptions WHERE user_id = %s", (user_id,))
+            conn.commit()
+    finally:
+        conn.close()
 
 def update_last_run(search_id, result_joined):
     # This updates the last_checked time for a search and the last results
     conn = get_connection()
-    cursor = conn.cursor()
-    
-    hd = hash_for_db(result_joined)
-    
-    cursor.execute("""
-                   UPDATE searches
-                   SET last_checked = NOW(), last_results = %s
-                   WHERE id = %s
-                   """, (hd ,search_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        with conn.cursor() as cursor:
+            hd = hash_for_db(result_joined)
+            cursor.execute("""
+                           UPDATE searches
+                           SET last_checked = NOW(), last_results = %s
+                           WHERE id = %s
+                           """, (hd ,search_id,))
+            conn.commit()
+    finally:
+        conn.close()
 
 def get_user_trial(user_id):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-                   SELECT user_id, alerts_used, alerts_limit, started_at
-                   FROM trials
-                   WHERE user_id=%s
-                   """, (user_id,))
-    row = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    if not row:
-        return None
-    return Trial(*row)
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                           SELECT user_id, alerts_used, alerts_limit, started_at
+                           FROM trials
+                           WHERE user_id=%s
+                           """, (user_id,))
+            row = cursor.fetchone()
+            return Trial(*row) if row else None
+    finally:
+        conn.close()
 
 def increment_user_trial(user_id):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-                   UPDATE trials
-                   SET alerts_used = alerts_used + 1
-                   WHERE user_id = %s
-                   RETURNING user_id, alerts_used, alerts_limit, started_at
-                   """, (user_id,))
-    row = cursor.fetchone()
-    conn.commit()
-    cursor.close()
-    conn.close()
-    if not row:
-        return None
-    return Trial(*row)
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                           UPDATE trials
+                           SET alerts_used = alerts_used + 1
+                           WHERE user_id = %s
+                           RETURNING user_id, alerts_used, alerts_limit, started_at
+                           """, (user_id,))
+            row = cursor.fetchone()
+            conn.commit()
+            return Trial(*row) if row else None
+    finally:
+        conn.close()
 
 def update_last_checked(search_id):
     # this only updates the last checked time
     conn = get_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("""
-                   UPDATE searches
-                   SET last_checked = NOW()
-                   WHERE id = %s
-                   """, (search_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                           UPDATE searches
+                           SET last_checked = NOW()
+                           WHERE id = %s
+                           """, (search_id,))
+            conn.commit()
+    finally:
+        conn.close()
 
 def elevate_user_to_paid(user_id):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-    UPDATE users
-    SET is_paying=TRUE
-    WHERE id=%s
-    """, (user_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    print(f"Elevated user {user_id} to paid")
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+            UPDATE users
+            SET is_paying=TRUE
+            WHERE id=%s
+            """, (user_id,))
+            conn.commit()
+            print(f"Elevated user {user_id} to paid")
+    finally:
+        conn.close()
 
 
 # CLI tool

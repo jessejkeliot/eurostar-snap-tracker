@@ -84,6 +84,9 @@ def process_message(user_id, message):
                 print(f"DEBUG: 🔍 Running search {search_id} now.")
                 ms = MinimalSearch(search.origin, search.destination, search.outbound_date, search.inbound_date)
                 url, results = run_search(ms)
+                if results is None:
+                    print(f"DEBUG: ⚠️ Scrape failed for search {search_id}. Skipping.")
+                    continue
                 print(f"DEBUG: 🎫 Found {len(results)} tickets.")
                 
                 # Use str(tj) for consistent database hashing
@@ -122,9 +125,8 @@ def process_message(user_id, message):
         return "OK"
     else:
         print(f"DEBUG: ❌ LLM failed to parse message for user {user_id}")
-        # LLM parsing failed despite passing regex
-        increment_abuse_strikes(user_id)
-        send_retry_message_to_user(user_id)
+        # LLM parsing failed despite passing regex - don't increment strikes for bot confusion
+        send_message_to_user(user_id, "Parsing Error", "Sorry, I couldn't quite understand your request. Please try again with a simpler format (e.g. 'London to Paris next Friday').")
         return "BAD"
 
 @bottle.route("/webhook/whatsapp", method="GET")
