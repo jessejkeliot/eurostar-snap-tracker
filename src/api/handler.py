@@ -180,9 +180,16 @@ def email_handler():
         data = bottle.request.json
         email_address = data.get("from")
         message = data.get("body")
-        print(f"DEBUG: 📧 Incoming email from {email_address}")
+        subject = data.get("subject", "")
+        
+        print(f"DEBUG: 📧 Incoming email from {email_address} with subject: {subject}")
         logger.info(f"📧 Received email webhook from {email_address}. Processing...")
         
+        # Check subject for "stop" to trigger unsubscribe
+        if "stop" in subject.lower():
+            logger.info(f"🛑 'stop' found in email subject from {email_address}. Treating as unsubscribe.")
+            message = "stop"
+            
         user = get_user_by_email(email_address)
         if user:
             user_id = user.id

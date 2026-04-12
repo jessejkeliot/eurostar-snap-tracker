@@ -35,8 +35,9 @@ def poll_emails():
                     if isinstance(response_part, tuple):
                         msg = email.message_from_bytes(response_part[1])
                         
-                        # Get sender
+                        # Get metadata
                         from_header = msg.get("From")
+                        subject_header = msg.get("Subject", "")
                         email_address = email.utils.parseaddr(from_header)[1]
                         
                         # Get body
@@ -54,6 +55,7 @@ def poll_emails():
                         if body and email_address:
                             payload = {
                                 "from": email_address,
+                                "subject": subject_header,
                                 "body": body
                             }
                             # Note: No auth header used for local service-to-service call
