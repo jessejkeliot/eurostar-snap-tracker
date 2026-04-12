@@ -365,7 +365,6 @@ def elevate_user_to_paid(user_id):
             WHERE id=%s
             """, (user_id,))
             conn.commit()
-            print(f"Elevated user {user_id} to paid")
     finally:
         conn.close()
 
@@ -402,10 +401,9 @@ if __name__ == "__main__":
             exit(1)
         if args.phone:
             user_id = create_user_from_phone(args.phone)
-            print(f"User created with ID: {user_id}")
         if args.email:
             user_id = create_user_from_email(args.email)
-            print(f"User created with ID: {user_id}")
+        print(f"Successfully created user {user_id} : {args.email or args.phone}")
 
     elif args.elevate_user:
         if not args.phone and not args.email:
@@ -423,6 +421,7 @@ if __name__ == "__main__":
                 print("Error: User not found")
                 exit(1)
             elevate_user_to_paid(user.id)
+        print(f"Successfully elevated user {user.id} : {user.email or user.phone} to paid status")
     elif args.delete_user:
         if not args.phone and not args.email:
             print("Error: Must provide at least --phone or --email")
@@ -439,6 +438,7 @@ if __name__ == "__main__":
                 print("Error: User not found")
                 exit(1)
             delete_user(user.id)
+        print(f"Successfully deleted user {user.id} : {user.email or user.phone}")
     elif args.add_search:
         if not args.origin or not args.destination or not args.outbound_date:
             print("Error: Must provide --origin, --destination, and --outbound-date")
@@ -454,7 +454,7 @@ if __name__ == "__main__":
             print("Error: At least one of the stations was invalid")
             exit(1)
         search = create_search(origin_id, destination_id, outbound, inbound)
-        print(f"Search created with ID: {search.id}")
+        print(f"Successfully created search {search.id} : {args.origin} to {args.destination} on {args.outbound_date}")
     
     elif args.add_subscription:
         if not args.user_id or not args.search_id:
@@ -463,7 +463,7 @@ if __name__ == "__main__":
         
         sub = create_subscription(args.user_id, args.search_id)
         if sub:
-            print(f"Subscription created for user {args.user_id} and search {args.search_id}")
+            print(f"Successfully created subscription for user {args.user_id} and search {args.search_id}")
         else:
             print(f"Subscription already exists for user {args.user_id} and search {args.search_id}")
     
