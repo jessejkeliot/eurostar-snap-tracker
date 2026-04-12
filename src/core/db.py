@@ -545,6 +545,7 @@ if __name__ == "__main__":
     
     else:
         # Default behavior if no command
+        # creates tables in the database if they don't exist
         conn = init_postgres_db()
         cursor = conn.cursor()
         cursor.execute("SELECT table_name FROM information_schema.tables WHERE table_schema='public';")

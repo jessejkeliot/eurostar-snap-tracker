@@ -212,9 +212,19 @@ def parse_message(message):
                 return None
             for i in range(delta + 1):
                 current_date = search.outbound_date + timedelta(days=i)
-                searches.append(MinimalSearch(origin=origin_id, destination=dest_id, outbound_date=current_date, inbound_date=search.inbound_date))
+                # Create a specific search model for each date in the range, using resolved IDs
+                day_search = MinimalSearchModel(
+                    origin=str(origin_id),
+                    destination=str(dest_id),
+                    outbound_date=current_date,
+                    inbound_date=search.inbound_date
+                )
+                searches.append(day_search)
         else:
-            searches.append(MinimalSearch(origin=origin_id, destination=dest_id, outbound_date=search.outbound_date, inbound_date=search.inbound_date))
+            # Update the original search object with IDs before returning
+            search.origin = str(origin_id)
+            search.destination = str(dest_id)
+            searches.append(search)
             
         return searches
     return None
