@@ -15,6 +15,11 @@ def handler():
     active_searches = get_active_searches()
     
     today = datetime.now().date()
+    # delete the searches that have gone past their outbound date
+    for search in active_searches:
+        if search.outbound_date < today:
+            delete_search(search.id)
+            logger.info(f"Today {today} is newer than search {search.id}'s outbound date {search.outbound_date}, deleting")
     # Filter active searches to the 14-day window
     trackable_searches = [s for s in active_searches if today <= s.outbound_date <= (today + timedelta(days=MAX_SEARCH_DAYS))]
     
