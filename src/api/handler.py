@@ -27,7 +27,7 @@ def process_message(user_id, message, source="whatsapp"):
     if msg_lower in ["stop", "unsubscribe", "cancel", "quit", "halt", "end", "remove"]:
         print(f"DEBUG: 🛑 Stop word detected for user {user_id}")
         delete_all_subscriptions_for_user(user_id)
-        send_message_to_user(user_id, "Unsubscribed", "You have been safely unsubscribed from all train alerts. 🛑\n\nSend a new route whenever you want to track fares again!")
+        send_message_to_user(user_id, "Unsubscribed", msg_templates.unsubscribed_msg)
         return "UNSUBSCRIBED"
         
     train_message = about_trains(message)
