@@ -286,6 +286,16 @@ def delete_all_subscriptions_for_user(user_id):
     finally:
         conn.close()
 
+def delete_user(user_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM users WHERE id = %s", (user_id,))
+            conn.commit()
+    finally:
+        conn.close()
+
+
 def update_last_run(search_id, result_joined):
     # This updates the last_checked time for a search and the last results
     conn = get_connection()
@@ -370,6 +380,7 @@ if __name__ == "__main__":
     parser.add_argument("--email", default=None, help="Email for the user")
 
     parser.add_argument("--elevate-user", action="store_true", help="Elevate a user to paid")
+    parser.add_argument("--delete-user", action="store_true", help="Delete a user")
     
     # Add search arguments
     parser.add_argument("--add-search", action="store_true", help="Add a new search")
@@ -412,7 +423,22 @@ if __name__ == "__main__":
                 print("Error: User not found")
                 exit(1)
             elevate_user_to_paid(user.id)
-    
+    elif args.delete_user:
+        if not args.phone and not args.email:
+            print("Error: Must provide at least --phone or --email")
+            exit(1)
+        if args.phone:
+            user = get_user_by_phone_number(args.phone)
+            if not user:
+                print("Error: User not found")
+                exit(1)
+            delete_user(user.id)
+        if args.email:
+            user = get_user_by_email(args.email)
+            if not user:
+                print("Error: User not found")
+                exit(1)
+            delete_user(user.id)
     elif args.add_search:
         if not args.origin or not args.destination or not args.outbound_date:
             print("Error: Must provide --origin, --destination, and --outbound-date")
