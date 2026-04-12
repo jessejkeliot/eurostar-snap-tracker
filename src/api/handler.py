@@ -10,6 +10,7 @@ from src.core.log_config import get_logger
 import bottle
 import os
 import stripe
+import threading
 from datetime import timedelta, datetime
 
 logger = get_logger(__name__)
@@ -283,12 +284,41 @@ def send_email():
 app = bottle.default_app()
 
 if __name__ == "__main__":
-    # Startup Diagnostic
-    print("🚀 Starting Eurostar Snap Tracker API...")
-    if not os.getenv("GEMINI_KEY"):
-        print("🛑 ERROR: GEMINI_KEY not found in environment!")
-    else:
-        print("✅ GEMINI_KEY detected.")
+    import argparse
+    parser = argparse.ArgumentParser(description="Eurostar Snap Tracker API & CLI")
+    parser.add_argument("--msg", type=str, help="Message to process (e.g. 'London to Paris next Friday')")
+    parser.add_argument("--email", type=str, help="User email for lookup/creation")
+    parser.add_argument("--phone", type=str, help="User phone for lookup/creation")
+    parser.add_argument("--source", type=str, default="email", help="Source of the message (default: email)")
+    parser.add_argument("--server", action="store_true", help="Start the bottle server")
     
-    print("📡 Listening on http://0.0.0.0:8080...")
-    bottle.run(app=app, host='0.0.0.0', port=8080, debug=True)
+    args = parser.parse_args()
+
+    if args.msg:
+        # CLI Mode
+        if not args.email and not args.phone:
+            print("❌ Error: Must provide --email or --phone for CLI testing.")
+            exit(1)
+        
+        print(f"🧪 CLI Test Mode: Processing '{args.msg}' from {args.email or args.phone} via {args.source}")
+        
+        if args.email:
+            user = get_user_by_email(args.email)
+            user_id = user.id if user else create_user_from_email(args.email)
+        else:
+            user = get_user_by_phone_number(args.phone)
+            user_id = user.id if user else create_user_from_phone(args.phone)
+            
+        result = process_message(user_id, args.msg, source=args.source)
+        print(f"🏁 Result: {result}")
+        
+    else:
+        # Server Mode (Default)
+        print("🚀 Starting Eurostar Snap Tracker API...")
+        if not os.getenv("GEMINI_KEY"):
+            print("🛑 ERROR: GEMINI_KEY not found in environment!")
+        else:
+            print("✅ GEMINI_KEY detected.")
+        
+        print("📡 Listening on http://0.0.0.0:8080...")
+        bottle.run(app=app, host='0.0.0.0', port=8080, debug=True)
