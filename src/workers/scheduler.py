@@ -1,5 +1,4 @@
-from src.core.services import delete_expired_searches
-from src.core.db import delete_search
+from src.core.db import delete_orphaned_searches, delete_search, delete_expired_searches
 from src.core.db import get_searches_due, get_subscribed_users, hash_for_db, update_last_checked, update_last_run
 from src.core.models import MinimalSearch, Search
 from src.core.services import MAX_SEARCH_DAYS, SEARCH_INTERVAL, get_jittered_search_interval
@@ -13,21 +12,27 @@ from src.core.log_config import get_logger
 
 logger = get_logger(__name__)
 def handler():
+    # 1. Global Orphan Cleanup (Efficiency: 1 SQL query)
+    orphans_count = delete_orphaned_searches()
+    if orphans_count > 0:
+        logger.info(f"🗑️ Cleaned up {orphans_count} orphaned search(es).")
+
+    # 2. Global Expired Cleanup (Efficiency: 1 SQL query)
+    expired_count = delete_expired_searches()
+    if expired_count > 0:
+        logger.info(f"📅 Cleaned up {expired_count} expired search(es).")
+
+    # 3. Get "Due" Searches
     active_searches = get_active_searches()
-    
     today = datetime.now().date()
-    # delete the searches that have gone past their outbound date
-    active_searches = delete_expired_searches(active_searches)
-    # Filter active searches to the 14-day window
-    trackable_searches = [s for s in active_searches if today <= s.outbound_date <= (today + timedelta(days=MAX_SEARCH_DAYS))]
     
-    for search in trackable_searches:
-        users = get_subscribed_users(search.id)
-        # clean up searches that have no subscribers
-        if(len(users) == 0):
-            delete_search(search.id)
-            logger.info(f"Search {search.id} has no subscribers, deleting")
+    for search in active_searches:
+        # 4. Filter to the trackable window
+        if not (today <= search.outbound_date <= (today + timedelta(days=MAX_SEARCH_DAYS))):
+            # Not in window? Update last_checked so it doesn't spam us every minute
+            update_last_checked(search.id)
             continue
+            
 
         url, results, results_string, has_changed = check_for_search_updates(search)
         
@@ -35,8 +40,8 @@ def handler():
             logger.warning(f"⚠️ Background scrape failed for search {search.id}. Skipping this cycle.")
             continue
 
-
         if has_changed:
+            users = get_subscribed_users(search.id)
             origin_name = get_station_name(search.origin)
             dest_name = get_station_name(search.destination)
             for user in users:

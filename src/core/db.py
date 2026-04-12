@@ -294,12 +294,41 @@ def delete_user(user_id):
             conn.commit()
     finally:
         conn.close()
+
 def delete_search(search_id):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute("DELETE FROM searches WHERE id = %s", (search_id,))
             conn.commit()
+    finally:
+        conn.close()
+
+def delete_orphaned_searches():
+    """Deletes all searches that have no associated subscriptions in ONE query."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                DELETE FROM searches 
+                WHERE id NOT IN (SELECT DISTINCT search_id FROM subscriptions)
+                AND created_at < NOW() - INTERVAL '1 minute'
+            """)
+            deleted_count = cursor.rowcount
+            conn.commit()
+            return deleted_count
+    finally:
+        conn.close()
+
+def delete_expired_searches():
+    """Deletes all searches that have an outbound_date in the past."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM searches WHERE outbound_date < CURRENT_DATE")
+            deleted_count = cursor.rowcount
+            conn.commit()
+            return deleted_count
     finally:
         conn.close()
 
