@@ -25,8 +25,11 @@ def poll_emails():
         # Search for unread emails with subject "train" or "Train"
         status, messages = imap.search(None, 'UNSEEN OR SUBJECT "train" SUBJECT "Train"')
         
-        if status == "OK" and messages[0]:
-            for num in messages[0].split():
+        if status == "OK":
+            unread_ids = messages[0].split()
+            logger.info(f"Found {len(unread_ids)} unread email(s) during check")
+            
+            for num in unread_ids:
                 status, msg_data = imap.fetch(num, "(RFC822)")
                 for response_part in msg_data:
                     if isinstance(response_part, tuple):
