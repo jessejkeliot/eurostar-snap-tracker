@@ -1,3 +1,4 @@
+from src.core.db import delete_search
 from src.core.db import (
     get_existing_search,
     create_search,
@@ -6,6 +7,9 @@ from src.core.db import (
 from datetime import datetime, timedelta
 import random
 from src.core.models import Search
+from src.core.log_config import get_logger
+
+logger = get_logger(__name__)
 
 MAX_SEARCH_DAYS = 14
 SEARCH_INTERVAL = timedelta(minutes=15)
@@ -42,3 +46,15 @@ def should_run_now(search: Search):
     jitter = timedelta(seconds=random.randint(-30, 30))
     next_run = search.last_checked + SEARCH_INTERVAL + jitter
     return (next_run - datetime.now()).total_seconds() < 120
+
+def delete_expired_searches(searches: list[Search]) -> list[Search]:
+    """Deletes searches that have gone past their outbound date and returns the remaining searches."""
+    today = datetime.now().date()
+    newSearches : list[Search] = []
+    for search in searches:
+        if search.outbound_date < today:
+            delete_search(search.id)
+            logger.info(f"Today {today} is newer than search {search.id}'s outbound date {search.outbound_date}, deleting")
+        else:
+            newSearches.append(search)
+    return newSearches

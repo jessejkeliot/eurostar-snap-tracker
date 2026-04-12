@@ -1,3 +1,4 @@
+from src.core.services import delete_expired_searches
 from src.core.db import delete_search
 from src.core.db import get_searches_due, get_subscribed_users, hash_for_db, update_last_checked, update_last_run
 from src.core.models import MinimalSearch, Search
@@ -16,10 +17,7 @@ def handler():
     
     today = datetime.now().date()
     # delete the searches that have gone past their outbound date
-    for search in active_searches:
-        if search.outbound_date < today:
-            delete_search(search.id)
-            logger.info(f"Today {today} is newer than search {search.id}'s outbound date {search.outbound_date}, deleting")
+    active_searches = delete_expired_searches(active_searches)
     # Filter active searches to the 14-day window
     trackable_searches = [s for s in active_searches if today <= s.outbound_date <= (today + timedelta(days=MAX_SEARCH_DAYS))]
     
@@ -30,7 +28,7 @@ def handler():
             delete_search(search.id)
             logger.info(f"Search {search.id} has no subscribers, deleting")
             continue
-        
+
         url, results, results_string, has_changed = check_for_search_updates(search)
         
         if results is None:
