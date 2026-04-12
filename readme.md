@@ -58,14 +58,45 @@ To check up on the running logs, you can use built-in journalctl commands:
 All python microservices are hooked up to a centralized logging system. You can view errors, Gemma outputs, and WhatsApp hook metrics by running:
 ``` tail -f bot.log ```
 
-### Adding Users, Searches and Subscriptions Manually
+### Database CLI Management
 
-You can pass arguments in to run INSERT statements on the db in the command line like:
-``` PYTHONPATH=. python3 src/core/db.py --add-user --email james@hotmail.com ```
-The user id will be printed which you can subsequently use in the add subscription tool
-``` PYTHONPATH=. python3 src/core/db.py --add-search --origin "Paris Gare du Nord" --destination "London St Pancras" --outbound-date "2026-04-23"```
-Link them so james gets updates about Trains from Paris -> London on the 23 of April.
-``` PYTHONPATH=. python3 src/core/db.py --add-subscription --user-id 1 --search-id 2 ```
+You can manage the database directly using the `src/core/db.py` CLI tool.
+
+**Basic Usage:**
+```bash
+PYTHONPATH=. python3 src/core/db.py --help
+```
+
+**Common Tasks:**
+
+*   **Add a User:**
+    ```bash
+    PYTHONPATH=. python3 src/core/db.py --add-user --email james@hotmail.com
+    # OR
+    PYTHONPATH=. python3 src/core/db.py --add-user --phone +447123456789
+    ```
+    *The user ID will be printed to the console.*
+
+*   **Elevate User to Premium:**
+    ```bash
+    PYTHONPATH=. python3 src/core/db.py --elevate-user --email james@hotmail.com
+    ```
+
+*   **Delete a User:**
+    ```bash
+    PYTHONPATH=. python3 src/core/db.py --delete-user --email james@hotmail.com
+    ```
+
+*   **Add a Search Route:**
+    ```bash
+    PYTHONPATH=. python3 src/core/db.py --add-search --origin "London St Pancras" --destination "Paris Gare du Nord" --outbound-date "2026-04-23"
+    ```
+    *The search ID will be printed to the console.*
+
+*   **Create a Subscription (Link User to Search):**
+    ```bash
+    PYTHONPATH=. python3 src/core/db.py --add-subscription --user-id 1 --search-id 2
+    ```
 
 ## Three Components
 
