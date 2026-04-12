@@ -1,3 +1,4 @@
+from src.bot import msg_templates
 from src.core.models import MinimalSearch
 from src.core.services import should_run_now, add_subscription, is_date_trackable, MAX_SEARCH_DAYS
 from src.bot.myparse import about_trains, get_station_name
@@ -220,14 +221,7 @@ def stripe_webhook():
             set_user_paid(user_id, expires)
             
             from src.bot.messaging import notify_user
-            msg = (
-                "✅ You’re now on premium\n\n"
-                "You’ll get:\n"
-                "⚡ Instant alerts\n"
-                "🎯 Priority deals\n\n"
-                "Next deal could drop anytime 👀"
-            )
-            notify_user(user_id, "Welcome to Premium!", msg)
+            notify_user(user_id, "Welcome to Premium!", msg_templates.premium_message)
             
     return "OK"
 

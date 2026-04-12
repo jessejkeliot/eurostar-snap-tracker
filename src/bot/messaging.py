@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from google import genai
 from google.genai import types
+from src.bot import msg_templates
 from src.bot.html_email import generate_html_email
 from src.core.models import MinimalSearch, MinimalSearchModel, User
 from datetime import datetime
@@ -119,10 +120,10 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, 
         subject = "🚨 Eurostar Snap Ticket Found!"
     
     if user.is_paying:
-        notify_user(user_id, subject, f"⚡ Priority Alert:\n\n{body}")
+        notify_user(user_id, subject, f"{msg_templates.premium_alert}{body}")
     elif trial and trial.alerts_used < trial.alerts_limit:
         increment_user_trial(user_id)
-        notify_user(user_id, subject, f"🆓 Free Alert ({trial.alerts_used + 1}/{trial.alerts_limit} used):\n\n{body}")
+        notify_user(user_id, subject, f"{msg_templates.free_alert(trial.alerts_used, trial.alerts_limit)}{body}")
     else:
         paywall_msg = (
             "🚨 Snap ticket found:\n\n"
@@ -141,14 +142,14 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, 
         logger.info(f"Scheduled delayed alert for user {user.phone_number or user.email}")
 
 def send_retry_message_to_user(user_id):
-    body = "Sorry, I didn't understand your message. Please try again with a train booking request.\n\n(Tip: Reply 'STOP' at any time to cancel all active alerts)."
+    body = msg_templates.misunderstood_msg
     notify_user(user_id, "Eurostar Bot - Message Not Understood", body)
 
 def send_message_to_user(user_id, subject, body):
     notify_user(user_id, subject, body)
 
 def send_onboarded_message_to_user(user_id):
-    body = "Welcome! You've been subscribed to train search notifications. You'll receive updates on your searches."
+    body = msg_templates.misunderstood_msg
     notify_user(user_id, "Welcome to Eurostar Bot", body)
 
 def parse_message(message):

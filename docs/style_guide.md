@@ -6,8 +6,8 @@ The design must feel fast, premium, and reliable—evoking the speed and savings
 ### 1. Color Palette
 
 **Primary Colors:**
-- **Eurostar Deep Blue (`#001A70`)**: Use for headers, primary buttons, and strong emphasis.
-- **Vibrant Accent Yellow (`#FFD700`)**: Use for alerts, highlights, and secondary calls-to-action to grab attention.
+- **Eurostar Deep Blue (`darkblue`)**: Use for headers, primary buttons, and strong emphasis.
+- **Vibrant Accent Yellow (`gold`)**: Use for alerts, highlights, and secondary calls-to-action to grab attention.
 
 **Secondary & Background Colors:**
 - **App Background (`#F4F6F9`)**: A slightly cool, premium light gray to let content cards stand out.
