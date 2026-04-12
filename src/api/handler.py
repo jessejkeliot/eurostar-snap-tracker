@@ -1,6 +1,6 @@
 from src.bot import msg_templates
 from src.core.models import MinimalSearch
-from src.core.services import should_run_now, add_subscription, is_date_trackable, MAX_SEARCH_DAYS
+from src.core.services import should_run_now, add_subscription, add_return_trip, is_date_trackable, MAX_SEARCH_DAYS
 from src.bot.myparse import about_trains, get_station_name
 from src.core.db import get_user_by_id, get_subscribed_users, create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user, get_abuse_strikes, increment_abuse_strikes, reset_abuse_strikes
 from src.scraper.tracker import run_search
@@ -64,8 +64,7 @@ def process_message(user_id, message, source="whatsapp"):
                 send_message_to_user(user_id, "Range Too Large", "Max search range is 7 days. Please try a shorter duration.")
                 return "BAD"
         
-        existing_dates_message = False
-        
+        any_new_subscription = False
         rejected_dates = []
         for params in params_list:
             if not is_date_trackable(params.outbound_date):
@@ -73,53 +72,68 @@ def process_message(user_id, message, source="whatsapp"):
                 rejected_dates.append(str(params.outbound_date))
                 continue
 
-            print(f"DEBUG: 📝 Subscribing user {user_id} to {params.outbound_date}")
-            search_id, is_sub_new = add_subscription(user_id, params.origin, params.destination, params.outbound_date, params.inbound_date)
-            search = get_search_by_id(search_id)
-            
-            origin_name = get_station_name(params.origin)
-            dest_name = get_station_name(params.destination)
+            # NEW: Handle return trip vs one-way
+            if params.inbound_date:
+                print(f"DEBUG: 📧 Return trip detected: {params.outbound_date} <-> {params.inbound_date}")
+                outbound_id, inbound_id, outbound_new, inbound_new = add_return_trip(
+                    user_id, params.origin, params.destination, params.outbound_date, params.inbound_date
+                )
+                search_data = [
+                    (outbound_id, outbound_new, True),  # ID, is_new, is_leg
+                    (inbound_id, inbound_new, True)
+                ]
+                if outbound_new or inbound_new:
+                    any_new_subscription = True
+            else:
+                print(f"DEBUG: 📝 One-way subscription: {params.outbound_date}")
+                search_id, is_sub_new = add_subscription(user_id, params.origin, params.destination, params.outbound_date)
+                search_data = [(search_id, is_sub_new, False)]
+                if is_sub_new:
+                    any_new_subscription = True
 
-            if not is_sub_new:
-                existing_dates_message = True
-
-            if search and (is_sub_new or should_run_now(search)):
-                print(f"DEBUG: 🔍 Running search {search_id} now.")
-                ms = MinimalSearch(search.origin, search.destination, search.outbound_date, search.inbound_date)
-                url, results = run_search(ms)
-                if results is None:
-                    print(f"DEBUG: ⚠️ Scrape failed for search {search_id}. Skipping.")
-                    continue
-                print(f"DEBUG: 🎫 Found {len(results)} tickets.")
+            # Process each search created/found
+            for search_id, is_new, is_leg in search_data:
+                search = get_search_by_id(search_id)
+                if not search: continue
                 
-                # Use str(tj) for consistent database hashing
-                result_joined = " ".join([str(tj) for tj in results])
-                hd = hash_for_db(result_joined)
-                
-                # Check if results actually changed
-                hash_changed = (search.last_results != hd)
-                if not results:
-                    print(f"DEBUG: ❌ No results for search {search_id}. Sending no results message if email.")
-                    if source == "email":
-                        send_no_results_message(user_id, origin_name, dest_name)
-                elif hash_changed:
-                    print(f"DEBUG: 📢 Results changed for search {search_id}. Broadcasting to all.")
-                    users = get_subscribed_users(search.id)
-                    for u in users:
-                        send_results_to_user(u.id, results, url, origin_name, dest_name)
-                elif is_sub_new:
-                    print(f"DEBUG: 📨 Results unchanged but user {user_id} is new. Sending initial alert.")
-                    send_results_to_user(user_id, results, url, origin_name, dest_name)
-                else:
-                    print(f"DEBUG: 🤐 Results unchanged and user {user_id} already subscribed. Staying silent.")
+                origin_name = get_station_name(search.origin)
+                dest_name = get_station_name(search.destination)
 
-                update_last_run(search.id, result_joined)
+                if is_new or should_run_now(search):
+                    print(f"DEBUG: 🔍 Running search {search_id} now.")
+                    ms = MinimalSearch(search.origin, search.destination, search.outbound_date)
+                    url, results = run_search(ms)
+                    
+                    if results is None:
+                        print(f"DEBUG: ⚠️ Scrape failed for search {search_id}. Skipping.")
+                        continue
+                    
+                    print(f"DEBUG: 🎫 Found {len(results)} tickets.")
+                    
+                    result_joined = " ".join([str(tj) for tj in results])
+                    hd = hash_for_db(result_joined)
+                    hash_changed = (search.last_results != hd)
+
+                    if not results:
+                        print(f"DEBUG: ❌ No results for search {search_id}. Sending no results message if email.")
+                        if source == "email":
+                            send_no_results_message(user_id, origin_name, dest_name)
+                    elif hash_changed:
+                        print(f"DEBUG: 📢 Results changed for search {search_id}. Broadcasting to all.")
+                        users = get_subscribed_users(search.id)
+                        for u in users:
+                            send_results_to_user(u.id, results, url, origin_name, dest_name, is_return_leg=is_leg)
+                    elif is_new:
+                        print(f"DEBUG: 📨 Results unchanged but user {user_id} is new. Sending initial alert.")
+                        send_results_to_user(user_id, results, url, origin_name, dest_name, is_return_leg=is_leg)
+                    
+                    update_last_run(search.id, result_joined)
         
         if rejected_dates:
             rejected_str = ", ".join(rejected_dates)
             send_message_to_user(user_id, "Search Range Limit", f"⚠️ Note: We only support tracking for dates within the next {MAX_SEARCH_DAYS} days. The following dates were skipped: {rejected_str}")
 
-        if existing_dates_message:
+        if any_new_subscription:
             if len(params_list) > 1:
                 earliest = min(p.outbound_date for p in params_list).strftime("%Y-%m-%d")
                 latest = max(p.outbound_date for p in params_list).strftime("%Y-%m-%d")

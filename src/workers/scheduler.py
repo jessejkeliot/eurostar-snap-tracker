@@ -1,11 +1,11 @@
 from src.core.db import delete_orphaned_searches, delete_search, delete_expired_searches
-from src.core.db import get_searches_due, get_subscribed_users, hash_for_db, update_last_checked, update_last_run
+from src.core.db import get_searches_due, get_subscribed_users, hash_for_db, update_last_checked, update_last_run, get_user_paired_search
 from src.core.models import MinimalSearch, Search
 from src.core.services import MAX_SEARCH_DAYS, SEARCH_INTERVAL, get_jittered_search_interval
 import time
 import random
 from src.scraper.tracker import TrainJourney, run_search
-from src.bot.messaging import send_results_to_user
+from src.bot.messaging import send_results_to_user, send_both_legs_available
 from src.bot.myparse import build_search_url, get_station_name
 from datetime import datetime, timedelta
 from src.core.log_config import get_logger
@@ -44,8 +44,21 @@ def handler():
             users = get_subscribed_users(search.id)
             origin_name = get_station_name(search.origin)
             dest_name = get_station_name(search.destination)
+            
             for user in users:
-                send_results_to_user(user.id, results, url, origin_name, dest_name)
+                # Check if this user is also tracking the other leg of a return trip
+                paired_search = get_user_paired_search(user.id, search.id)
+                
+                is_leg = False
+                if paired_search:
+                    is_leg = True
+                    # If the other leg also has results, we could send a special "Both Leg" message.
+                    # For now, since we only store the Hash in the DB, we pass is_return_leg=True
+                    # to give the user context that this is part of their return journey.
+                    if paired_search.last_results:
+                        print(f"DEBUG: 🎫 Both legs available for user {user.id}! (Search {search.id} and {paired_search.id})")
+                
+                send_results_to_user(user.id, results, url, origin_name, dest_name, is_return_leg=is_leg)
             
             update_last_run(search.id, results_string)
         else:

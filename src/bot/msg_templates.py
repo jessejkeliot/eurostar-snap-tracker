@@ -38,3 +38,13 @@ def no_results_msg(origin=None, destination=None):
 def free_alert(alerts_used, alerts_limit):
     body = f"Free Alert ({alerts_used + 1}/{alerts_limit} used):\n\n"
     return None, body
+
+def both_legs_msg(origin_name, dest_name, outbound_date, inbound_date):
+    subject = f"🎉 Both legs available: {origin_name} <-> {dest_name}"
+    body = (
+        f"Great news! We found Snap tickets for BOTH directions of your return journey. 🎫🎫\n\n"
+        f"📅 Outbound: {outbound_date}\n"
+        f"📅 Inbound: {inbound_date}\n\n"
+        f"Check the links below to book your deals before they're gone!"
+    )
+    return subject, body

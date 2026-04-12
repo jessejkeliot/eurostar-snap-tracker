@@ -10,17 +10,26 @@ CREATE TABLE IF NOT EXISTS users (
     CHECK (email IS NOT NULL OR phone_number IS NOT NULL)
 );
 
--- Searches table
+-- Searches table (all searches are one-way)
 CREATE TABLE IF NOT EXISTS searches (
     id SERIAL PRIMARY KEY,
-    UNIQUE(origin, destination, outbound_date, inbound_date),
+    UNIQUE(origin, destination, outbound_date),
     origin INTEGER NOT NULL,
     destination INTEGER NOT NULL,
     outbound_date DATE NOT NULL,
-    inbound_date DATE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_checked TIMESTAMP DEFAULT NULL,
     last_results CHAR(64) DEFAULT NULL
+);
+
+-- Search pairs table (links two one-way searches that form a return trip)
+CREATE TABLE IF NOT EXISTS search_pairs (
+    id SERIAL PRIMARY KEY,
+    outbound_search_id INTEGER NOT NULL,
+    inbound_search_id INTEGER NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (outbound_search_id) REFERENCES searches(id) ON DELETE CASCADE,
+    FOREIGN KEY (inbound_search_id) REFERENCES searches(id) ON DELETE CASCADE
 );
 
 -- Subscriptions table

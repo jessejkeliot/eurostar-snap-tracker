@@ -2,7 +2,7 @@ import psycopg2
 from pathlib import Path
 from dotenv import load_dotenv
 import os
-from src.core.models import User, Search, Subscription, Trial
+from src.core.models import User, Search, SearchPair, Subscription, Trial
 from datetime import datetime
 import argparse
 
@@ -50,20 +50,19 @@ def init_postgres_db(db_params=DB_PARAMS, schema_file=SCHEMA_FILE):
     print(f"Database initialized with schema from {schema_file}")
     return conn
 
-def get_existing_search(origin, destination, outbound_date, inbound_date):
+def get_existing_search(origin, destination, outbound_date):
     conn = get_connection()
     try:
         with conn.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
+                SELECT id, origin, destination, outbound_date, created_at, last_checked, last_results
                 FROM searches
                 WHERE origin = %s
                   AND destination = %s
                   AND outbound_date = %s
-                  AND inbound_date IS NOT DISTINCT FROM %s
                 """,
-                (origin, destination, outbound_date, inbound_date),
+                (origin, destination, outbound_date),
             )
             row = cursor.fetchone()
             if row:
@@ -110,17 +109,16 @@ def create_user_from_phone(phone_number):
     finally:
         conn.close()
 
-def create_search(origin, destination, outbound_date, inbound_date):
-    # INSERT INTO searches ...
+def create_search(origin, destination, outbound_date):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT INTO searches (origin, destination, outbound_date, inbound_date)
-        VALUES (%s, %s, %s, %s)
-        RETURNING id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
+        INSERT INTO searches (origin, destination, outbound_date)
+        VALUES (%s, %s, %s)
+        RETURNING id, origin, destination, outbound_date, created_at, last_checked, last_results
         """,
-        (origin, destination, outbound_date, inbound_date),
+        (origin, destination, outbound_date),
     )
     row = cursor.fetchone()
     conn.commit()
@@ -145,10 +143,10 @@ def create_subscription(user_id, search_id):
         conn.close()
 
 def get_search_by_id(search_id):
-    conn =  get_connection()
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""
-                   SELECT id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
+                   SELECT id, origin, destination, outbound_date, created_at, last_checked, last_results
                    FROM searches
                    WHERE id = %s
                    """, (search_id,))
@@ -166,7 +164,7 @@ def get_searches_due(search_interval: float):
     try:
         with conn.cursor() as cursor:
             cursor.execute("""
-                           SELECT id, origin, destination, outbound_date, inbound_date, created_at, last_checked, last_results
+                           SELECT id, origin, destination, outbound_date, created_at, last_checked, last_results
                            FROM searches
                            WHERE last_checked IS NULL
                            OR last_checked <= NOW() - (%s * INTERVAL '1 second')
@@ -332,6 +330,51 @@ def delete_expired_searches():
     finally:
         conn.close()
 
+def create_search_pair(outbound_search_id, inbound_search_id):
+    """Links two one-way searches as a return trip pair."""
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                INSERT INTO search_pairs (outbound_search_id, inbound_search_id)
+                VALUES (%s, %s)
+                ON CONFLICT DO NOTHING
+                RETURNING id, outbound_search_id, inbound_search_id, created_at
+            """, (outbound_search_id, inbound_search_id))
+            row = cursor.fetchone()
+            conn.commit()
+            return SearchPair(*row) if row else None
+    finally:
+        conn.close()
+
+def get_user_paired_search(user_id, search_id):
+    """
+    Given a user and a search_id, returns the OTHER leg's Search if:
+    1. This search belongs to a search_pair, AND
+    2. This specific user is also subscribed to the other leg.
+    Returns None if not a paired search for this user.
+    """
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("""
+                SELECT s.id, s.origin, s.destination, s.outbound_date, s.created_at, s.last_checked, s.last_results
+                FROM searches s
+                JOIN subscriptions sub ON sub.search_id = s.id AND sub.user_id = %s
+                WHERE s.id IN (
+                    SELECT CASE
+                        WHEN sp.outbound_search_id = %s THEN sp.inbound_search_id
+                        WHEN sp.inbound_search_id = %s THEN sp.outbound_search_id
+                    END
+                    FROM search_pairs sp
+                    WHERE sp.outbound_search_id = %s OR sp.inbound_search_id = %s
+                )
+            """, (user_id, search_id, search_id, search_id, search_id))
+            row = cursor.fetchone()
+            return Search(*row) if row else None
+    finally:
+        conn.close()
+
 
 def update_last_run(search_id, result_joined):
     # This updates the last_checked time for a search and the last results
@@ -423,7 +466,6 @@ if __name__ == "__main__":
     parser.add_argument("--origin", type=str, default=None, help="Origin station ID")
     parser.add_argument("--destination", type=str, default=None, help="Destination station ID")
     parser.add_argument("--outbound-date", default=None, help="Outbound date (YYYY-MM-DD)")
-    parser.add_argument("--inbound-date", default=None, help="Inbound date (YYYY-MM-DD)")
     
     # Add subscription arguments
     parser.add_argument("--add-subscription", action="store_true", help="Add a subscription")
@@ -482,15 +524,12 @@ if __name__ == "__main__":
             exit(1)
         
         outbound = datetime.strptime(args.outbound_date, "%Y-%m-%d").date()
-        inbound = None
-        if args.inbound_date:
-            inbound = datetime.strptime(args.inbound_date, "%Y-%m-%d").date()
         origin_id = get_station_id(args.origin)
         destination_id = get_station_id(args.destination)
         if(not origin_id or not destination_id):
             print("Error: At least one of the stations was invalid")
             exit(1)
-        search = create_search(origin_id, destination_id, outbound, inbound)
+        search = create_search(origin_id, destination_id, outbound)
         print(f"Successfully created search {search.id} : {args.origin} to {args.destination} on {args.outbound_date}")
     
     elif args.add_subscription:

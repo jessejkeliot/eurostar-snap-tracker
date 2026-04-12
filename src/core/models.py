@@ -19,7 +19,6 @@ class Search:
     origin: int
     destination: int
     outbound_date: date
-    inbound_date: Optional[date]
     created_at: datetime
     last_checked: Optional[datetime]
     last_results: Optional[str]
@@ -29,14 +28,20 @@ class MinimalSearch:
     origin: int
     destination: int
     outbound_date: date
-    inbound_date: Optional[date]
 
-class MinimalSearchModel(BaseModel): # with the names for origin and destination because my parsing will be done
+@dataclass
+class SearchPair:
+    id: int
+    outbound_search_id: int
+    inbound_search_id: int
+    created_at: datetime
+
+class MinimalSearchModel(BaseModel):
     origin: str = Field(description="Origin station name")
     destination: str = Field(description="Destination station name")
     outbound_date: date = Field(description="Outbound travel date")
     end_date: Optional[date] = Field(default=None, description="End date if a range is requested")
-    inbound_date: Optional[date] = Field(default=None, description="Optional inbound travel date")
+    inbound_date: Optional[date] = Field(default=None, description="Optional inbound travel date for return trips")
 
 @dataclass
 class Subscription:

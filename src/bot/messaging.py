@@ -71,7 +71,7 @@ def notify_user(user_id, subject, body):
         success, error = send_gmail_message(user.email, subject, body, html_body)
         if not success:
             logger.error(f"Failed to send email: {error}")
-def format_ticket_results(results: list[TrainJourney], origin_name, dest_name):
+def format_ticket_results(results: list[TrainJourney], origin_name, dest_name, is_return_leg=False):
     if not results:
         return ""
     
@@ -81,10 +81,17 @@ def format_ticket_results(results: list[TrainJourney], origin_name, dest_name):
     currency = results[0].currency or "£"
     
     # Inviting Header
-    header = f"🎉 Great news! We found {len(results)} deals for your trip!\n\n"
+    if is_return_leg:
+        header = f"🚆 We found a deal for one direction of your return journey!\n\n"
+    else:
+        header = f"🎉 Great news! We found {len(results)} deals for your trip!\n\n"
+
     header += f"📍 Route: {origin_name} ➔ {dest_name}\n"
     header += f"📅 Date: {travel_date}\n"
     header += f"✨ Best Price: {currency}{min_price:.2f}\n"
+
+    if is_return_leg:
+         header += "🔗 Keep an eye out — we're still tracking the other leg too.\n"
     
     # Ticket List
     ticket_lines = ["\nAvailable Departures:"]
@@ -95,7 +102,7 @@ def format_ticket_results(results: list[TrainJourney], origin_name, dest_name):
     
     return header + "\n".join(ticket_lines)
 
-def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, origin_name: str = None, dest_name: str = None):
+def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, origin_name: str = None, dest_name: str = None, is_return_leg=False):
     # SILENCE IS GOLDEN: Do not send email if no results found
     if not results:
         print(f"DEBUG: ℹ️ No results for user {user_id}. Skipping email.")
@@ -108,13 +115,15 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, 
     trial = get_user_trial(user_id)
     
     # Build ONE combined body — inviting and information rich
-    body = format_ticket_results(results, origin_name or "Unknown", dest_name or "Unknown")
+    body = format_ticket_results(results, origin_name or "Unknown", dest_name or "Unknown", is_return_leg=is_return_leg)
     
     # Append buy link if we have one
     if url:
         body += f"\n\n{url}"
 
-    if origin_name and dest_name:
+    if is_return_leg:
+        subject = f"⍟ One Leg Available: {origin_name} to {dest_name}"
+    elif origin_name and dest_name:
         subject = f"⍟ Ticket: {origin_name} to {dest_name}"
     else:
         subject = "Eurostar Snap Ticket Found!"
@@ -142,6 +151,19 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, 
         t = threading.Timer(600.0, notify_user, args=[user_id, "Delayed Eurostar Search", paywall_msg])
         t.start()
         logger.info(f"Scheduled delayed alert for user {user.phone_number or user.email}")
+
+def send_both_legs_available(user_id, outbound_results, inbound_results, outbound_url, inbound_url, origin_name, dest_name, outbound_date, inbound_date):
+    user = get_user_by_id(user_id)
+    if not user: return
+
+    subject, body_header = msg_templates.both_legs_msg(origin_name, dest_name, outbound_date, inbound_date)
+    
+    outbound_details = format_ticket_results(outbound_results, origin_name, dest_name)
+    inbound_details = format_ticket_results(inbound_results, dest_name, origin_name)
+    
+    full_body = f"{body_header}\n\n--- OUTBOUND ---\n{outbound_details}\n{outbound_url}\n\n--- INBOUND ---\n{inbound_details}\n{inbound_url}"
+    
+    notify_user(user_id, subject, full_body)
 
 def send_no_results_message(user_id, origin_name=None, dest_name=None):
     subject, body = msg_templates.no_results_msg(origin_name, dest_name)

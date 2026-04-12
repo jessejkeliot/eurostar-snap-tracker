@@ -2,6 +2,7 @@ from src.core.db import (
     get_existing_search,
     create_search,
     create_subscription,
+    create_search_pair,
     delete_search,
 )
 from datetime import datetime, timedelta
@@ -22,14 +23,39 @@ def is_date_trackable(target_date):
     # Support today + up to 14 days in the future
     return today <= target_date <= (today + timedelta(days=MAX_SEARCH_DAYS))
 
-def add_subscription(user_id, origin, destination, outbound_date, inbound_date):
-    search = get_existing_search(origin, destination, outbound_date, inbound_date)
+def add_subscription(user_id, origin, destination, outbound_date):
+    """Creates or gets a one-way search and subscribes the user to it."""
+    search = get_existing_search(origin, destination, outbound_date)
 
     if not search:
-        search = create_search(origin, destination, outbound_date, inbound_date)
+        search = create_search(origin, destination, outbound_date)
     
     is_sub_new = create_subscription(user_id, search.id)
     return search.id, is_sub_new
+
+def add_return_trip(user_id, origin, destination, outbound_date, inbound_date):
+    """
+    Creates two one-way searches (outbound leg + inbound leg) and links them
+    in search_pairs. Subscribes the user to both.
+    Returns (outbound_search_id, inbound_search_id, outbound_is_new, inbound_is_new).
+    """
+    # Outbound leg: origin -> destination on outbound_date
+    outbound_search = get_existing_search(origin, destination, outbound_date)
+    if not outbound_search:
+        outbound_search = create_search(origin, destination, outbound_date)
+    outbound_is_new = create_subscription(user_id, outbound_search.id)
+
+    # Inbound leg: destination -> origin on inbound_date (reversed!)
+    inbound_search = get_existing_search(destination, origin, inbound_date)
+    if not inbound_search:
+        inbound_search = create_search(destination, origin, inbound_date)
+    inbound_is_new = create_subscription(user_id, inbound_search.id)
+
+    # Link them
+    create_search_pair(outbound_search.id, inbound_search.id)
+    logger.info(f"🔗 Linked searches {outbound_search.id} (outbound) and {inbound_search.id} (inbound) as return pair for user {user_id}")
+
+    return outbound_search.id, inbound_search.id, outbound_is_new, inbound_is_new
 
 
 def get_jittered_search_interval():
@@ -46,15 +72,3 @@ def should_run_now(search: Search):
     jitter = timedelta(seconds=random.randint(-30, 30))
     next_run = search.last_checked + SEARCH_INTERVAL + jitter
     return (next_run - datetime.now()).total_seconds() < 120
-
-def delete_expired_searches(searches: list[Search]) -> list[Search]:
-    """Deletes searches that have gone past their outbound date and returns the remaining searches."""
-    today = datetime.now().date()
-    newSearches : list[Search] = []
-    for search in searches:
-        if search.outbound_date < today:
-            delete_search(search.id)
-            logger.info(f"Today {today} is newer than search {search.id}'s outbound date {search.outbound_date}, deleting")
-        else:
-            newSearches.append(search)
-    return newSearches
