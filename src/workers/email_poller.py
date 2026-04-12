@@ -22,8 +22,8 @@ def poll_emails():
         imap.login(USERNAME, PASSWORD)
         imap.select("INBOX")
         
-        # Search for unread emails with subject "train"
-        status, messages = imap.search(None, '(UNSEEN SUBJECT "train")')
+        # Search for unread emails with subject "train" or "Train"
+        status, messages = imap.search(None, 'UNSEEN OR SUBJECT "train" SUBJECT "Train"')
         
         if status == "OK" and messages[0]:
             for num in messages[0].split():

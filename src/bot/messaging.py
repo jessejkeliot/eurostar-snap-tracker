@@ -141,6 +141,10 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, 
         t.start()
         logger.info(f"Scheduled delayed alert for user {user.phone_number or user.email}")
 
+def send_no_results_message(user_id, origin_name=None, dest_name=None):
+    subject = f"Search Started: {origin_name} to {dest_name}" if origin_name and dest_name else "Eurostar Search Started"
+    notify_user(user_id, subject, msg_templates.no_results_msg)
+
 def send_retry_message_to_user(user_id):
     body = msg_templates.misunderstood_msg
     notify_user(user_id, "Eurostar Bot - Message Not Understood", body)

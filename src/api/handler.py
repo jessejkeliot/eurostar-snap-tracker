@@ -4,7 +4,7 @@ from src.core.services import should_run_now, add_subscription, is_date_trackabl
 from src.bot.myparse import about_trains, get_station_name
 from src.core.db import get_user_by_id, get_subscribed_users, create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user, get_abuse_strikes, increment_abuse_strikes, reset_abuse_strikes
 from src.scraper.tracker import run_search
-from src.bot.messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user, send_message_to_user
+from src.bot.messaging import parse_message, send_onboarded_message_to_user, send_results_to_user, send_retry_message_to_user, send_message_to_user, send_no_results_message
 from src.core.mailer import send_gmail_message
 from src.core.log_config import get_logger
 import bottle
@@ -14,7 +14,7 @@ from datetime import timedelta, datetime
 
 logger = get_logger(__name__)
 
-def process_message(user_id, message):
+def process_message(user_id, message, source="whatsapp"):
     print(f"DEBUG: 🔄 Starting process_message for user {user_id}")
     strikes = get_abuse_strikes(user_id)
     if strikes >= 3:
@@ -105,7 +105,10 @@ def process_message(user_id, message):
                         send_results_to_user(u.id, results, url, origin_name, dest_name)
                 elif is_sub_new:
                     print(f"DEBUG: 📨 Results unchanged but user {user_id} is new. Sending initial alert.")
-                    send_results_to_user(user_id, results, url, origin_name, dest_name)
+                    if not results and source == "email":
+                         send_no_results_message(user_id, origin_name, dest_name)
+                    else:
+                         send_results_to_user(user_id, results, url, origin_name, dest_name)
                 else:
                     print(f"DEBUG: 🤐 Results unchanged and user {user_id} already subscribed. Staying silent.")
 
@@ -167,7 +170,7 @@ def whatsapp_handler():
                             else:
                                 user_id = create_user_from_phone(phone_number)
                                 
-                            process_message(user_id, message_body)
+                            process_message(user_id, message_body, source="whatsapp")
     return "OK"
 
 @bottle.route("/webhook/email", method="POST")
@@ -185,7 +188,7 @@ def email_handler():
         else:
             user_id = create_user_from_email(email_address)
             
-        process_message(user_id, message)
+        process_message(user_id, message, source="email")
         logger.info(f"✅ Webhook processing complete for {email_address}")
         return {"status": "OK"}
     except Exception as e:
