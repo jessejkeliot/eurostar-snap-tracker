@@ -115,9 +115,9 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, 
         body += f"\n\n{url}"
 
     if origin_name and dest_name:
-        subject = f"🚨 Ticket Found: {origin_name} to {dest_name}"
+        subject = f"⍟ Ticket: {origin_name} to {dest_name}"
     else:
-        subject = "🚨 Eurostar Snap Ticket Found!"
+        subject = "Eurostar Snap Ticket Found!"
     
     if user.is_paying:
         notify_user(user_id, subject, f"{msg_templates.premium_alert}{body}")
@@ -132,7 +132,7 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, 
             "You’re seeing this 10 minutes later than premium users ⏱️\n\n"
             "Upgrade for:\n"
             "⚡ Instant alerts\n"
-            "🔁 Unlimited deals\n"
+            "🔁 Unlimited usage\n"
             "🗓️ Multi-day tracking ranges\n\n"
             "👉 £2.49/month\n"
             f"https://buy.stripe.com/test_checkout_link?client_reference_id={user_id}"
