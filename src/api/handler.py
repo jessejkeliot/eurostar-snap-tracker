@@ -98,18 +98,18 @@ def process_message(user_id, message, source="whatsapp"):
                 
                 # Check if results actually changed
                 hash_changed = (search.last_results != hd)
-                
-                if hash_changed:
+                if not results:
+                    print(f"DEBUG: ❌ No results for search {search_id}. Sending no results message if email.")
+                    if source == "email":
+                        send_no_results_message(user_id, origin_name, dest_name)
+                elif hash_changed:
                     print(f"DEBUG: 📢 Results changed for search {search_id}. Broadcasting to all.")
                     users = get_subscribed_users(search.id)
                     for u in users:
                         send_results_to_user(u.id, results, url, origin_name, dest_name)
                 elif is_sub_new:
                     print(f"DEBUG: 📨 Results unchanged but user {user_id} is new. Sending initial alert.")
-                    if not results and source == "email":
-                         send_no_results_message(user_id, origin_name, dest_name)
-                    else:
-                         send_results_to_user(user_id, results, url, origin_name, dest_name)
+                    send_results_to_user(user_id, results, url, origin_name, dest_name)
                 else:
                     print(f"DEBUG: 🤐 Results unchanged and user {user_id} already subscribed. Staying silent.")
 
