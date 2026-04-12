@@ -1,3 +1,4 @@
+from src.core.db import delete_search
 from src.core.db import get_searches_due, get_subscribed_users, hash_for_db, update_last_checked, update_last_run
 from src.core.models import MinimalSearch, Search
 from src.core.services import MAX_SEARCH_DAYS, SEARCH_INTERVAL, get_jittered_search_interval
@@ -31,7 +32,9 @@ def handler():
             users = get_subscribed_users(search.id)
             for user in users:
                 send_results_to_user(user.id, results, url, origin_name, dest_name)
-                
+            if(len(users) == 0):
+                delete_search(search.id)
+                logger.info(f"Search {search.id} has no subscribers, deleting")
             update_last_run(search.id, results_string)
         else:
             update_last_checked(search.id)

@@ -294,6 +294,14 @@ def delete_user(user_id):
             conn.commit()
     finally:
         conn.close()
+def delete_search(search_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("DELETE FROM searches WHERE id = %s", (search_id,))
+            conn.commit()
+    finally:
+        conn.close()
 
 
 def update_last_run(search_id, result_joined):
