@@ -108,7 +108,7 @@ def generate_html_email(subject, body):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Parse a message about train bookings")
-    parser.add_argument("message", nargs="?", default=msg_templates.premium_message, help="Message to parse")
+    parser.add_argument("message", nargs="?", default=msg_templates.premium_upgrade()[1], help="Message to parse")
 
     args = parser.parse_args()
     html = generate_html_email("Email Template", args.message)

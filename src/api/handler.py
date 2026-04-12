@@ -27,7 +27,8 @@ def process_message(user_id, message, source="whatsapp"):
     if msg_lower in ["stop", "unsubscribe", "cancel", "quit", "halt", "end", "remove"]:
         print(f"DEBUG: 🛑 Stop word detected for user {user_id}")
         delete_all_subscriptions_for_user(user_id)
-        send_message_to_user(user_id, "Unsubscribed", msg_templates.unsubscribed_msg)
+        subject, body = msg_templates.unsubscribed_msg()
+        send_message_to_user(user_id, subject, body)
         return "UNSUBSCRIBED"
         
     train_message = about_trains(message)
@@ -225,7 +226,8 @@ def stripe_webhook():
             set_user_paid(user_id, expires)
             
             from src.bot.messaging import notify_user
-            notify_user(user_id, "Welcome to Premium!", msg_templates.premium_message)
+            subject, body = msg_templates.premium_upgrade()
+            notify_user(user_id, subject, body)
             
     return "OK"
 

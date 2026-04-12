@@ -120,10 +120,12 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, 
         subject = "Eurostar Snap Ticket Found!"
     
     if user.is_paying:
-        notify_user(user_id, subject, f"{msg_templates.premium_alert}{body}")
+        _, prefix = msg_templates.premium_alert()
+        notify_user(user_id, subject, f"{prefix}{body}")
     elif trial and trial.alerts_used < trial.alerts_limit:
         increment_user_trial(user_id)
-        notify_user(user_id, subject, f"{msg_templates.free_alert(trial.alerts_used, trial.alerts_limit)}{body}")
+        _, prefix = msg_templates.free_alert(trial.alerts_used, trial.alerts_limit)
+        notify_user(user_id, subject, f"{prefix}{body}")
     else:
         paywall_msg = (
             "🚨 Snap ticket found:\n\n"
@@ -142,19 +144,19 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, 
         logger.info(f"Scheduled delayed alert for user {user.phone_number or user.email}")
 
 def send_no_results_message(user_id, origin_name=None, dest_name=None):
-    subject = f"Search Started: {origin_name} to {dest_name}" if origin_name and dest_name else "Eurostar Search Started"
-    notify_user(user_id, subject, msg_templates.no_results_msg)
+    subject, body = msg_templates.no_results_msg(origin_name, dest_name)
+    notify_user(user_id, subject, body)
 
 def send_retry_message_to_user(user_id):
-    body = msg_templates.misunderstood_msg
-    notify_user(user_id, "Eurostar Bot - Message Not Understood", body)
+    subject, body = msg_templates.misunderstood_msg()
+    notify_user(user_id, subject, body)
 
 def send_message_to_user(user_id, subject, body):
     notify_user(user_id, subject, body)
 
 def send_onboarded_message_to_user(user_id):
-    body = msg_templates.onboard_msg
-    notify_user(user_id, "Welcome to Eurostar Bot", body)
+    subject, body = msg_templates.onboard_msg()
+    notify_user(user_id, subject, body)
 
 def parse_message(message):
     print("DEBUG: 🧠 Sending request to Gemma...")
