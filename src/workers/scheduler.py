@@ -24,22 +24,26 @@ def handler():
     trackable_searches = [s for s in active_searches if today <= s.outbound_date <= (today + timedelta(days=MAX_SEARCH_DAYS))]
     
     for search in trackable_searches:
+        users = get_subscribed_users(search.id)
+        # clean up searches that have no subscribers
+        if(len(users) == 0):
+            delete_search(search.id)
+            logger.info(f"Search {search.id} has no subscribers, deleting")
+            continue
+        
         url, results, results_string, has_changed = check_for_search_updates(search)
         
         if results is None:
             logger.warning(f"⚠️ Background scrape failed for search {search.id}. Skipping this cycle.")
             continue
 
+
         if has_changed:
             origin_name = get_station_name(search.origin)
             dest_name = get_station_name(search.destination)
-            
-            users = get_subscribed_users(search.id)
             for user in users:
                 send_results_to_user(user.id, results, url, origin_name, dest_name)
-            if(len(users) == 0):
-                delete_search(search.id)
-                logger.info(f"Search {search.id} has no subscribers, deleting")
+            
             update_last_run(search.id, results_string)
         else:
             update_last_checked(search.id)
