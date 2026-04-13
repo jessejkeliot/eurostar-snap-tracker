@@ -17,6 +17,22 @@ def onboard_msg():
     body = "Welcome! You've been subscribed to train search notifications. You'll receive updates on your searches."
     return subject, body
 
+def paywall_msg(body_in, user_id):
+    subject = "Delayed Eurostar Alert"
+    body = (
+            "🚨 Snap ticket found:\n\n"
+            f"{body_in}\n\n"
+            "You’ve used your free alerts 👀\n"
+            "You’re seeing this 20 minutes later than premium users\n\n"
+            "Upgrade for:\n"
+            "⚡ Instant alerts\n"
+            "∞ Unlimited usage\n"
+            "Multi-day tracking ranges\n\n"
+            "Only £2.49/month\n"
+            f"https://buy.stripe.com/test_checkout_link?client_reference_id={user_id}"
+        )
+    return subject, body
+
 def misunderstood_msg():
     subject = "Eurostar Bot - Message Not Understood"
     body = "Sorry, I didn't understand your message. Please try again with a train booking request.\n\n(Tip: Reply 'STOP' at any time to cancel all active alerts)"

@@ -82,16 +82,16 @@ def format_ticket_results(results: list[TrainJourney], origin_name, dest_name, i
     
     # Inviting Header
     if is_return_leg:
-        header = f"🚆 We found a deal for one direction of your return journey!\n\n"
+        header = f"We found a deal for one direction of your return journey!\n\n"
     else:
         header = f"🎉 Great news! We found {len(results)} deals for your trip!\n\n"
 
-    header += f"📍 Route: {origin_name} ➔ {dest_name}\n"
-    header += f"📅 Date: {travel_date}\n"
+    header += f"Route: {origin_name} ➔ {dest_name}\n"
+    header += f"Date: {travel_date}\n"
     header += f"✨ Best Price: {currency}{min_price:.2f}\n"
 
     if is_return_leg:
-         header += "🔗 Keep an eye out — we're still tracking the other leg too.\n"
+         header += "Keep an eye out — we're still tracking the other leg too.\n"
     
     # Ticket List
     ticket_lines = ["\nAvailable Departures:"]
@@ -136,19 +136,7 @@ def send_results_to_user(user_id, results: list[TrainJourney], url: str = None, 
         _, prefix = msg_templates.free_alert(trial.alerts_used, trial.alerts_limit)
         notify_user(user_id, subject, f"{prefix}{body}")
     else:
-        paywall_msg = (
-            "🚨 Snap ticket found:\n\n"
-            f"{body}\n\n"
-            "You’ve used your free alerts 👀\n"
-            "You’re seeing this 10 minutes later than premium users ⏱️\n\n"
-            "Upgrade for:\n"
-            "⚡ Instant alerts\n"
-            "🔁 Unlimited usage\n"
-            "🗓️ Multi-day tracking ranges\n\n"
-            "👉 £2.49/month\n"
-            f"https://buy.stripe.com/test_checkout_link?client_reference_id={user_id}"
-        )
-        t = threading.Timer(600.0, notify_user, args=[user_id, "Delayed Eurostar Search", paywall_msg])
+        t = threading.Timer(1200.0, notify_user, args=[user_id, *msg_templates.paywall_msg(body, user_id)])
         t.start()
         logger.info(f"Scheduled delayed alert for user {user.phone_number or user.email}")
 
