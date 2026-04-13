@@ -1,18 +1,26 @@
 ## Architecture
+### Three Components
 
-WhatsApp → Webhook → Store in DB
-                         ↓
-                Scheduled Lambda
-                         ↓
-                 Scraper runs
-                         ↓
-                Send WhatsApp alerts
+Email Poller 🔄 (every 45 seconds)
+HTTP Bottle Endpoint 🔄 
+Scrape Scheduler 🔄 (every 60 seconds)
 
-1. User sends WhatsApp message
-2. Store request in DB related to their phone number
-3. Scheduled job (Lambda) runs every ~15 min
-4. It loops through stored requests
-5. Sends alerts if conditions match
+
+### Email Poller
+
+Found in email_poller.py . It polls the gmail smtp server for new emails. Should filter to only ones with subject "train" or "stop" ( to unsub ) then sends the body of the messages to the bottle endpoint.
+
+### HTTP Bottle Endpoint
+
+Found in handler.py . Is running continuously. It uses an llm call on a gemma model to parse the user's message into valid JSON form
+It sends and recieves messages from the user. It is the interface.
+
+### Scrape Scheduler
+
+Found in scheduler.py, it gets the searches that are due for running and iterates through them and calls the tracking on them.
+It then finds the subscribed users to that search and sends an http request to the Bottle endpoint to send a message.
+
+Should have it where tickets for a longer period away are checked less often. Ranging from every 22 mins to every 12
 
 ### How to run (subject to change)
 Must set up a .env file. Use the .env.sample file and fill in with your own api keys and database information.
@@ -98,28 +106,7 @@ PYTHONPATH=. python3 src/core/db.py --help
     PYTHONPATH=. python3 src/core/db.py --add-subscription --user-id 1 --search-id 2
     ```
 
-## Three Components
 
-Email Poller 🔄 (every 45 seconds)
-HTTP Bottle Endpoint 🔄 
-Scrape Scheduler 🔄 (every 60 seconds)
-
-
-### Email Poller
-
-Found in email_poller.py . It polls the gmail smtp server for new emails. Should filter to only ones with subject "train" then sends the body of the messages to the bottle endpoint.
-
-### HTTP Bottle Endpoint
-
-Found in handler.py . Is running continuously. It uses an llm call on a gemma model to parse the user's message into valid JSON form
-It then runs the also runs the tracker
-
-### Scrape Scheduler
-
-Found in scheduler.py, it gets the searches that are due for running and iterates through them and calls the tracking on them.
-It then finds the subscribed users to that search and sends an http request to the Bottle endpoint to send a message.
-
-Should have it where tickets for a longer period away are checked less often. Ranging from every 22 mins to every 12
 
 ## Google Cloud
 
