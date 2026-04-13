@@ -78,7 +78,7 @@ def get_active_searches() -> list[Search]:
 def check_for_search_updates(search: Search) -> tuple[str, list[TrainJourney], str, bool]:
     """Executes the search and checks if the results differ from the last run."""
     # create a minimal search object that only contains the data needed for constructing a search url
-    ms = MinimalSearch(search.origin, search.destination, search.outbound_date, search.inbound_date)
+    ms = MinimalSearch(search.origin, search.destination, search.outbound_date)
     url, results = run_search(ms)
     
     # Use str(tj) for consistent database hashing

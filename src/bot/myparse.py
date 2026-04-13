@@ -55,12 +55,11 @@ def get_station_name(station_id: int | str) -> str | None:
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    if len(args) != 3 and len(args) != 4:
-        print("Usage: python myparse.py <origin> <destination> <outbound_date> [inbound_date]")
+    if len(args) != 3:
+        print("Usage: python myparse.py <origin> <destination> <outbound_date>")
         sys.exit(1)
     origin = args[0]
     destination = args[1]
     outbound_date = args[2]
-    inbound_date = args[3] if len(args) > 3 else None
-    print(build_search_url(origin, destination, outbound_date, inbound_date))
+    print(build_search_url(origin, destination, outbound_date))
     
