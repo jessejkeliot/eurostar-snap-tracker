@@ -13,7 +13,7 @@ from src.core.log_config import get_logger
 logger = get_logger(__name__)
 
 MAX_SEARCH_DAYS = 14
-SEARCH_INTERVAL = timedelta(minutes=15)
+SEARCH_INTERVAL = timedelta(minutes=45)
 
 def is_date_trackable(target_date):
     if not target_date:
