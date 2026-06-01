@@ -50,10 +50,9 @@ def process_message(user_id, message, source="whatsapp"):
             if not user.is_paying:
                 print(f"DEBUG: 💰 User {user_id} hit multi-day paywall.")
                 msg = (
-                    "🗓️ Multi-day tracking is a Premium feature!\n\n"
+                    "Multi-day tracking is a Premium feature!\n\n"
                     "Upgrade for:\n"
-                    "⚡ Instant alerts\n"
-                    "🔁 Unlimited deals\n"
+                    "Instant and Unlimited alerts\n"
                     "🗓️ Multi-day tracking ranges\n\n"
                     "👉 £2.49/month\n"
                     f"https://buy.stripe.com/test_checkout_link?client_reference_id={user_id}"
@@ -61,7 +60,7 @@ def process_message(user_id, message, source="whatsapp"):
                 send_message_to_user(user_id, "Premium Feature", msg)
                 return "PAYWALL"
             if len(params_list) > 7:
-                print(f"DEBUG: 📏 User {user_id} requested range > 7 days.")
+                print(f"DEBUG: User {user_id} requested range > 7 days.")
                 send_message_to_user(user_id, "Range Too Large", "Max search range is 7 days. Please try a shorter duration.")
                 return "BAD"
         
@@ -80,7 +79,7 @@ def process_message(user_id, message, source="whatsapp"):
             search_data = []
             # NEW: Handle return trip vs one-way
             if params.inbound_date:
-                print(f"DEBUG: 📧 Return trip detected: {params.outbound_date} <-> {params.inbound_date}")
+                print(f"DEBUG: RETURN trip subscription: {params.outbound_date} <-> {params.inbound_date}")
                 outbound_id, inbound_id, outbound_new, inbound_new = add_return_trip(
                     user_id, params.origin, params.destination, params.outbound_date, params.inbound_date
                 )
@@ -91,7 +90,7 @@ def process_message(user_id, message, source="whatsapp"):
                 if outbound_new or inbound_new:
                     any_new_subscription = True
             elif params.outbound_date:
-                print(f"DEBUG: 📝 One-way subscription: {params.outbound_date}")
+                print(f"DEBUG: ONE WAY subscription: {params.outbound_date}")
                 search_id, is_sub_new = add_subscription(user_id, params.origin, params.destination, params.outbound_date)
                 search_data += [(search_id, is_sub_new, False)]
                 if is_sub_new:
@@ -113,26 +112,26 @@ def process_message(user_id, message, source="whatsapp"):
                     url, results = run_search(ms)
                     
                     if results is None:
-                        print(f"DEBUG: Scrape failed for search {search_id}. Skipping.")
+                        print(f"DEBUG: Scrape FAILED for search {search_id}. Skipping.")
                         continue
                     
-                    print(f"DEBUG: 🎫 Found {len(results)} tickets.")
+                    print(f"DEBUG: FOUND {len(results)} tickets.")
                     
                     result_joined = " ".join([str(tj) for tj in results])
                     hd = hash_for_db(result_joined)
                     hash_changed = (search.last_results != hd)
 
                     if not results:
-                        print(f"DEBUG: No results for search {search_id}. Sending no results message if email.")
+                        print(f"DEBUG: NO results for search {search_id}. Sending no results message if email.")
                         if source == "email":
                             send_no_results_message(user_id, origin_name, dest_name)
                     elif hash_changed:
-                        print(f"DEBUG: Results changed for search {search_id}. Broadcasting to all.")
+                        print(f"DEBUG: Results CHANGED for search {search_id}. Broadcasting to all.")
                         users = get_subscribed_users(search.id)
                         for u in users:
                             send_results_to_user(u.id, results, url, origin_name, dest_name, is_return_leg=is_leg)
                     elif is_new:
-                        print(f"DEBUG: Results unchanged but user {user_id} is new. Sending initial alert.")
+                        print(f"DEBUG: Results UNCHANGED but user {user_id} is new. Sending initial alert.")
                         send_results_to_user(user_id, results, url, origin_name, dest_name, is_return_leg=is_leg)
                     
                     update_last_run(search.id, result_joined)
@@ -148,7 +147,7 @@ def process_message(user_id, message, source="whatsapp"):
                 latest = max(p.outbound_date for p in params_list).strftime("%Y-%m-%d")
                 body = f"Welcome! You've been subscribed to train search notifications for the range {earliest} -> {latest}. You'll receive updates on your searches."
                 
-                body += any_dates_outside_range * f"\nAt least one of the dates you sent was more than {MAX_SEARCH_DAYS}. Eurostar Snap only releases tickets within 14 days of travel so we can't check for tickets yet but when we can we'll let you know as soon as any come up."
+                body += any_dates_outside_range * f"\nAt least one of the dates you sent was more than {MAX_SEARCH_DAYS}. Eurostar Snap only releases tickets within 14 days of travel so we can't check for those tickets yet but when we can we'll let you know as soon as any come up."
                 send_message_to_user(user_id, "Welcome to Eurostar Bot", body)
             else:
                 send_onboarded_message_to_user(user_id)
