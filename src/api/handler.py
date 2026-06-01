@@ -53,8 +53,8 @@ def process_message(user_id, message, source="whatsapp"):
                     "Multi-day tracking is a Premium feature!\n\n"
                     "Upgrade for:\n"
                     "Instant and Unlimited alerts\n"
-                    "🗓️ Multi-day tracking ranges\n\n"
-                    "👉 £2.49/month\n"
+                    "Multi-day tracking ranges\n\n"
+                    "Just £2.49/month\n"
                     f"https://buy.stripe.com/test_checkout_link?client_reference_id={user_id}"
                 )
                 send_message_to_user(user_id, "Premium Feature", msg)
@@ -146,8 +146,8 @@ def process_message(user_id, message, source="whatsapp"):
                 earliest = min(p.outbound_date for p in params_list).strftime("%Y-%m-%d")
                 latest = max(p.outbound_date for p in params_list).strftime("%Y-%m-%d")
                 body = f"Welcome! You've been subscribed to train search notifications for the range {earliest} -> {latest}. You'll receive updates on your searches."
-                
-                body += any_dates_outside_range * f"\nAt least one of the dates you sent was more than {MAX_SEARCH_DAYS}. Eurostar Snap only releases tickets within 14 days of travel so we can't check for those tickets yet but when we can we'll let you know as soon as any come up."
+                if(any_dates_outside_range):
+                    body += f"\nAt least one of the dates you sent was more than {MAX_SEARCH_DAYS}. Eurostar Snap only releases tickets within 14 days of travel so we can't check for those tickets yet but when we can we'll let you know as soon as any come up."
                 send_message_to_user(user_id, "Welcome to Eurostar Bot", body)
             else:
                 send_onboarded_message_to_user(user_id)

@@ -84,11 +84,11 @@ def format_ticket_results(results: list[TrainJourney], origin_name, dest_name, i
     if is_return_leg:
         header = f"We found a deal for one direction of your return journey!\n\n"
     else:
-        header = f"🎉 Great news! We found {len(results)} deals for your trip!\n\n"
+        header = f"Great news! We found {len(results)} deals for your trip!\n\n"
 
     header += f"Route: {origin_name} ➔ {dest_name}\n"
     header += f"Date: {travel_date}\n"
-    header += f"✨ Best Price: {currency}{min_price:.2f}\n"
+    header += f"Best Price: {currency}{min_price:.2f}\n"
 
     if is_return_leg:
          header += "Keep an eye out — we're still tracking the other leg too.\n"
