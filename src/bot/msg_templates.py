@@ -1,7 +1,7 @@
 def premium_upgrade():
     subject = "Welcome to Premium!"
     body = (
-        "✅ You’re now on premium\n\n"
+        "You’re now on premium\n\n"
         "You’ll get:\n"
         "⚡ Instant alerts\n"
         "∞ Unlimited usage \n\n"
@@ -22,7 +22,7 @@ def paywall_msg(body_in, user_id):
     body = (
             "🚨 Snap ticket found:\n\n"
             f"{body_in}\n\n"
-            "You’ve used your free alerts 👀\n"
+            "You’ve used your free alerts\n"
             "You’re seeing this 20 minutes later than premium users\n\n"
             "Upgrade for:\n"
             "⚡ Instant alerts\n"
@@ -40,7 +40,7 @@ def misunderstood_msg():
 
 def unsubscribed_msg():
     subject = "Unsubscribed"
-    body = "You have been safely unsubscribed from all train alerts. 🛑\n\nSend a new route whenever you want to track fares again!"
+    body = "You have been safely unsubscribed from all train alerts. \n\nSend a new route whenever you want to track fares again!"
     return subject, body
 
 def no_results_msg(origin=None, destination=None):
@@ -48,7 +48,7 @@ def no_results_msg(origin=None, destination=None):
         subject = f"Search Started: {origin} to {destination}"
     else:
         subject = "Eurostar Search Started"
-    body = "We couldn't find any tickets for this search at the moment, but don't worry! We'll keep tracking it and let you know as soon as some become available. 🔎"
+    body = "We couldn't find any tickets for this search at the moment, but don't worry! We'll keep tracking it and let you know as soon as some become available."
     return subject, body
 
 def free_alert(alerts_used, alerts_limit):
@@ -58,9 +58,9 @@ def free_alert(alerts_used, alerts_limit):
 def both_legs_msg(origin_name, dest_name, outbound_date, inbound_date):
     subject = f"🎉 Both legs available: {origin_name} <-> {dest_name}"
     body = (
-        f"Great news! We found Snap tickets for BOTH directions of your return journey. 🎫🎫\n\n"
-        f"📅 Outbound: {outbound_date}\n"
-        f"📅 Inbound: {inbound_date}\n\n"
+        f"Great news! We found Snap tickets for BOTH directions of your return journey. \n\n"
+        f"Outbound: {outbound_date}\n"
+        f"Inbound: {inbound_date}\n\n"
         f"Check the links below to book your deals before they're gone!"
     )
     return subject, body
