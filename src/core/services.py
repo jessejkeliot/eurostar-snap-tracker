@@ -15,13 +15,17 @@ logger = get_logger(__name__)
 MAX_SEARCH_DAYS = 14
 SEARCH_INTERVAL = timedelta(minutes=45)
 
-def is_date_trackable(target_date):
+def is_date_in_future(target_date):
     if not target_date:
         return False
     
     today = datetime.now().date()
     # Support today + up to 14 days in the future
-    return today <= target_date <= (today + timedelta(days=MAX_SEARCH_DAYS))
+    return today <= target_date
+
+def is_date_within_interval(target_date):
+    today = datetime.now().date()
+    return target_date <= (today + timedelta(days=MAX_SEARCH_DAYS))
 
 def add_subscription(user_id, origin, destination, outbound_date):
     """Creates or gets a one-way search and subscribes the user to it."""

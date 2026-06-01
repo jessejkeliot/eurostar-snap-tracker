@@ -1,6 +1,6 @@
 from src.bot import msg_templates
 from src.core.models import MinimalSearch
-from src.core.services import should_run_now, add_subscription, add_return_trip, is_date_trackable, MAX_SEARCH_DAYS
+from src.core.services import is_date_within_interval, should_run_now, add_subscription, add_return_trip, is_date_in_future, MAX_SEARCH_DAYS
 from src.bot.myparse import about_trains, get_station_name
 from src.core.db import get_user_by_id, get_subscribed_users, create_user_from_phone, create_user_from_email, get_search_by_id, get_user_by_phone_number, get_user_by_email, hash_for_db, update_last_run, set_user_paid, delete_all_subscriptions_for_user, get_abuse_strikes, increment_abuse_strikes, reset_abuse_strikes
 from src.scraper.tracker import run_search
@@ -67,30 +67,37 @@ def process_message(user_id, message, source="whatsapp"):
         
         any_new_subscription = False
         rejected_dates = []
+        any_dates_outside_range = False
         for params in params_list:
-            if not is_date_trackable(params.outbound_date):
-                print(f"DEBUG: 🛑 Skipping date {params.outbound_date} (outside {MAX_SEARCH_DAYS} day limit)")
+            if not is_date_in_future(params.outbound_date):
+                print(f"DEBUG: Date {params.outbound_date} is in the past {MAX_SEARCH_DAYS}")
                 rejected_dates.append(str(params.outbound_date))
                 continue
-
+            if not is_date_within_interval(params.outbound_date):
+                print(f"DEBUG: Date {params.outbound_date} is outside search range of {MAX_SEARCH_DAYS} days")
+                any_dates_outside_range = True
+            
+            search_data = []
             # NEW: Handle return trip vs one-way
             if params.inbound_date:
                 print(f"DEBUG: 📧 Return trip detected: {params.outbound_date} <-> {params.inbound_date}")
                 outbound_id, inbound_id, outbound_new, inbound_new = add_return_trip(
                     user_id, params.origin, params.destination, params.outbound_date, params.inbound_date
                 )
-                search_data = [
+                search_data += [
                     (outbound_id, outbound_new, True),  # ID, is_new, is_leg
                     (inbound_id, inbound_new, True)
                 ]
                 if outbound_new or inbound_new:
                     any_new_subscription = True
-            else:
+            elif params.outbound_date:
                 print(f"DEBUG: 📝 One-way subscription: {params.outbound_date}")
                 search_id, is_sub_new = add_subscription(user_id, params.origin, params.destination, params.outbound_date)
-                search_data = [(search_id, is_sub_new, False)]
+                search_data += [(search_id, is_sub_new, False)]
                 if is_sub_new:
                     any_new_subscription = True
+            else:
+                print(f"DEBUG: Neither inbound or outbound date, so can't make a subscription")
 
             # Process each search created/found
             for search_id, is_new, is_leg in search_data:
@@ -100,13 +107,13 @@ def process_message(user_id, message, source="whatsapp"):
                 origin_name = get_station_name(search.origin)
                 dest_name = get_station_name(search.destination)
 
-                if is_new or should_run_now(search):
-                    print(f"DEBUG: 🔍 Running search {search_id} now.")
+                if is_new or should_run_now(search) and is_date_within_interval(search.outbound_date):
+                    print(f"DEBUG: Running search {search_id} now.")
                     ms = MinimalSearch(search.origin, search.destination, search.outbound_date)
                     url, results = run_search(ms)
                     
                     if results is None:
-                        print(f"DEBUG: ⚠️ Scrape failed for search {search_id}. Skipping.")
+                        print(f"DEBUG: Scrape failed for search {search_id}. Skipping.")
                         continue
                     
                     print(f"DEBUG: 🎫 Found {len(results)} tickets.")
@@ -116,36 +123,39 @@ def process_message(user_id, message, source="whatsapp"):
                     hash_changed = (search.last_results != hd)
 
                     if not results:
-                        print(f"DEBUG: ❌ No results for search {search_id}. Sending no results message if email.")
+                        print(f"DEBUG: No results for search {search_id}. Sending no results message if email.")
                         if source == "email":
                             send_no_results_message(user_id, origin_name, dest_name)
                     elif hash_changed:
-                        print(f"DEBUG: 📢 Results changed for search {search_id}. Broadcasting to all.")
+                        print(f"DEBUG: Results changed for search {search_id}. Broadcasting to all.")
                         users = get_subscribed_users(search.id)
                         for u in users:
                             send_results_to_user(u.id, results, url, origin_name, dest_name, is_return_leg=is_leg)
                     elif is_new:
-                        print(f"DEBUG: 📨 Results unchanged but user {user_id} is new. Sending initial alert.")
+                        print(f"DEBUG: Results unchanged but user {user_id} is new. Sending initial alert.")
                         send_results_to_user(user_id, results, url, origin_name, dest_name, is_return_leg=is_leg)
                     
                     update_last_run(search.id, result_joined)
+                    
         
         if rejected_dates:
             rejected_str = ", ".join(rejected_dates)
-            send_message_to_user(user_id, "Search Range Limit", f"⚠️ Note: We only support tracking for dates within the next {MAX_SEARCH_DAYS} days. The following dates were skipped: {rejected_str}")
+            send_message_to_user(user_id, "Search Range", f"Funnily enough we only support tracking dates that are in the future. The following dates were skipped as they have been and gone: {rejected_str}")
 
         if any_new_subscription:
             if len(params_list) > 1:
                 earliest = min(p.outbound_date for p in params_list).strftime("%Y-%m-%d")
                 latest = max(p.outbound_date for p in params_list).strftime("%Y-%m-%d")
                 body = f"Welcome! You've been subscribed to train search notifications for the range {earliest} -> {latest}. You'll receive updates on your searches."
+                
+                body += any_dates_outside_range * f"\nAt least one of the dates you sent was more than {MAX_SEARCH_DAYS}. Eurostar Snap only releases tickets within 14 days of travel so we can't check for tickets yet but when we can we'll let you know as soon as any come up."
                 send_message_to_user(user_id, "Welcome to Eurostar Bot", body)
             else:
                 send_onboarded_message_to_user(user_id)
-        print(f"DEBUG: ✅ process_message finished successfully for user {user_id}")
+        print(f"DEBUG: √ process_message finished successfully for user {user_id}")
         return "OK"
     else:
-        print(f"DEBUG: ❌ LLM failed to parse message for user {user_id}")
+        print(f"DEBUG: Ⓧ LLM failed to parse message for user {user_id}")
         # LLM parsing failed despite passing regex - don't increment strikes for bot confusion
         send_message_to_user(user_id, "Parsing Error", "Sorry, I couldn't quite understand your request. Please try again with a simpler format (e.g. 'London to Paris next Friday').")
         return "BAD"
