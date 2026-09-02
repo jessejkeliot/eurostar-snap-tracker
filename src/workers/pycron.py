@@ -1,6 +1,6 @@
 from time import sleep
 
-from scheduler import handler
+from src.workers.scheduler import handler
 
 while True:
     handler()

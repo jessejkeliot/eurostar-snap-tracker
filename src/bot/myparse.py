@@ -1,3 +1,4 @@
+import sys
 from urllib.parse import urlencode
 import re
 
@@ -12,7 +13,7 @@ def about_trains(message: str) -> bool:
     """
     # Create a pattern from key train words
     # Use a subset of train_words to avoid overly complex regex
-    key_words = ["eurostar", "train", "paris", "amsterdam", "london", "brussels", "rail", "booking", "ticket"]
+    key_words = ["eurostar", "train", "trains", "trein", "treinen", "paris", "amsterdam", "london", "brussels", "rail", "booking", "ticket"]
     key_words.extend(train_words)
     pattern = r'\b(' + '|'.join(key_words) + r')\b'
     
@@ -22,7 +23,7 @@ def about_trains(message: str) -> bool:
 # for the llm
 # print(station_ids.keys())
 
-def build_search_url(origin: str | int, destination: str | int, outbound_date, inbound_date=None):
+def build_search_url(origin: str | int, destination: str | int, outbound_date):
     base_url = "https://snap.eurostar.com/uk-en/search"
 
     params = {
@@ -31,8 +32,6 @@ def build_search_url(origin: str | int, destination: str | int, outbound_date, i
         "destination": get_station_id(destination),
         "outbound": outbound_date,  # YYYY-MM-DD
     }
-    if inbound_date:
-        params["inbound"] = inbound_date
     return f"{base_url}?{urlencode(params)}"
 
 def get_station_id(station: str | int) -> int | None:
@@ -45,3 +44,22 @@ def get_station_id(station: str | int) -> int | None:
     if id:
         return int(str(id))
     return None
+
+def get_station_name(station_id: int | str) -> str | None:
+    # Reverse lookup 
+    target_id = str(station_id)
+    for name, sid in station_ids.items():
+        if sid == target_id:
+            return name
+    return None
+
+if __name__ == "__main__":
+    args = sys.argv[1:]
+    if len(args) != 3:
+        print("Usage: python myparse.py <origin> <destination> <outbound_date>")
+        sys.exit(1)
+    origin = args[0]
+    destination = args[1]
+    outbound_date = args[2]
+    print(build_search_url(origin, destination, outbound_date))
+    

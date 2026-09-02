@@ -1,18 +1,26 @@
 ## Architecture
+### Three Components
 
-WhatsApp → Webhook → Store in DB
-                         ↓
-                Scheduled Lambda
-                         ↓
-                 Scraper runs
-                         ↓
-                Send WhatsApp alerts
+Email Poller 🔄 (every 45 seconds)
+HTTP Bottle Endpoint 🔄 
+Scrape Scheduler 🔄 (every 60 seconds)
 
-1. User sends WhatsApp message
-2. Store request in DB related to their phone number
-3. Scheduled job (Lambda) runs every ~15 min
-4. It loops through stored requests
-5. Sends alerts if conditions match
+
+### Email Poller
+
+Found in email_poller.py . It polls the gmail smtp server for new emails. Should filter to only ones with subject "train" or "stop" ( to unsub ) then sends the body of the messages to the bottle endpoint.
+
+### HTTP Bottle Endpoint
+
+Found in handler.py . Is running continuously. It uses an llm call on a gemma model to parse the user's message into valid JSON form
+It sends and recieves messages from the user. It is the interface.
+
+### Scrape Scheduler
+
+Found in scheduler.py, it gets the searches that are due for running and iterates through them and calls the tracking on them.
+It then finds the subscribed users to that search and sends an http request to the Bottle endpoint to send a message.
+
+Should have it where tickets for a longer period away are checked less often. Ranging from every 22 mins to every 12
 
 ### How to run (subject to change)
 Must set up a .env file. Use the .env.sample file and fill in with your own api keys and database information.
@@ -25,44 +33,80 @@ Then install the requirements with
 ``` pip3 install -r requirements.txt ```
 
 If first time running run
-``` python3 init_db.py ```
+``` PYTHONPATH=. python3 src/core/init_db.py ```
 
-Then in three (two right now) seperate terminal tabs or windows.
-1. Start up the bottle api endpoint in **handler.py** by running
-``` python3 handler.py ```
-2. Start up the faux-cron python script **pycron.py**
+Then in three separate terminal tabs or windows:
+1. Start up the bottle API endpoint in **handler.py** using gunicorn by running:
+``` PYTHONPATH=. gunicorn -w 2 -b 0.0.0.0:8080 src.api.handler:app ```
+2. Start up the faux-cron python script in **pycron.py** by running:
+``` PYTHONPATH=. python3 -m src.workers.pycron ```
+3. Start up the email poller in **email_poller.py** by running:
+``` PYTHONPATH=. python3 -m src.workers.email_poller ```
 
-### Adding Users, Searches and Subscriptions Manually
+### How to Run on Linux (Google Cloud e2-micro / Ubuntu)
 
-You can pass arguments in to run INSERT statements on the db in the command line like:
-``` db.py --add-user --email james@hotmail.com ```
-The user id will be printed which you can subsequently use in the add subscription tool
-```python3 db.py --add-search --origin "Paris Gare du Nord" --destination "London St Pancras" --outbound-date "2026-04-23"```
-Link them so james gets updates about Trains from Paris -> London on the 23 of April.
-```python3 db.py --add-subscription --user-id 1 --search-id 2 ```
+For production environments, you should run the services via `systemd` so they automatically restart if the machine reboots or the processes crash. We've included a script in `scripts/` to do this automatically.
 
-## Three Components
+Once you have cloned the project on your server and activated the virtual environment:
+1. Run the deployment script with sudo:
+``` sudo bash scripts/install_services_linux.sh ```
+2. The script will dynamically generate `.service` wrappers and boot Gunicorn + Pycron + the Email Poller instantly into the background.
 
-Email Poller 🔄 (every 45 seconds)
-HTTP Bottle Endpoint 🔄 
-Scrape Scheduler 🔄 (every 60 seconds)
+To check up on the running logs, you can use built-in journalctl commands:
+- `sudo journalctl -u whatsnap-api -f`
+- `sudo journalctl -u whatsnap-cron -f`
+- `sudo journalctl -u whatsnap-poller -f`
+
+**Managing the Services:**
+- Stop all services: `sudo systemctl stop whatsnap-api whatsnap-cron whatsnap-poller`
+- Restart (e.g. after pulling code updates): `sudo systemctl restart whatsnap-api whatsnap-cron whatsnap-poller`
+- Disable them completely: `sudo systemctl disable whatsnap-api whatsnap-cron whatsnap-poller`
+
+**Viewing the Application Logs:**
+All python microservices are hooked up to a centralized logging system. You can view errors, Gemma outputs, and WhatsApp hook metrics by running:
+``` tail -f bot.log ```
+
+### Database CLI Management
+
+You can manage the database directly using the `src/core/db.py` CLI tool.
+
+**Basic Usage:**
+```bash
+PYTHONPATH=. python3 src/core/db.py --help
+```
+
+**Common Tasks:**
+
+*   **Add a User:**
+    ```bash
+    PYTHONPATH=. python3 src/core/db.py --add-user --email james@hotmail.com
+    # OR
+    PYTHONPATH=. python3 src/core/db.py --add-user --phone +447123456789
+    ```
+    *The user ID will be printed to the console.*
+
+*   **Elevate User to Premium:**
+    ```bash
+    PYTHONPATH=. python3 src/core/db.py --elevate-user --email james@hotmail.com
+    ```
+
+*   **Delete a User:**
+    ```bash
+    PYTHONPATH=. python3 src/core/db.py --delete-user --email james@hotmail.com
+    ```
+
+*   **Add a Search Route:**
+    ```bash
+    PYTHONPATH=. python3 src/core/db.py --add-search --origin "London St Pancras" --destination "Paris Gare du Nord" --outbound-date "2026-04-23"
+    ```
+    *The search ID will be printed to the console.*
+
+*   **Create a Subscription (Link User to Search):**
+    ```bash
+    PYTHONPATH=. python3 src/core/db.py --add-subscription --user-id 1 --search-id 2
+    ```
 
 
-### Email Poller
-
-Found in email_poller.py . It polls the gmail smtp server for new emails. Should filter to only ones with subject "train" then sends the body of the messages to the bottle endpoint.
-
-### HTTP Bottle Endpoint
-
-Found in handler.py . Is running continuously. It uses an llm call on a gemma model to parse the user's message into valid JSON form
-It then runs the also runs the tracker
-
-### Scrape Scheduler
-
-Found in scheduler.py, it gets the searches that are due for running and iterates through them and calls the tracking on them.
-It then finds the subscribed users to that search and sends an http request to the Bottle endpoint to send a message.
-
-Should have it where tickets for a longer period away are checked less often. Ranging from every 22 mins to every 12
 
 ## Google Cloud
 
@@ -104,7 +148,7 @@ If no return date is given, omit inbound_date.
 
 Call tracker.py with parameters. Example
 
-``` python3 tracker.py --origin "London St Pancras" --destination "Amsterdam Centraal" --outbound_date "2026-04-08" ```
+``` PYTHONPATH=. python3 -m src.scraper.tracker --origin "London St Pancras" --destination "Amsterdam Centraal" --outbound_date "2026-04-08" ```
 
 ## DB
 
